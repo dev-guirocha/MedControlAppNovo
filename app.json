@@ -1,31 +1,29 @@
 {
   "expo": {
-    "name": "MedControlAppNovo",
-    "slug": "MedControlAppNovo",
+    "name": "MedControlApp",
+    "slug": "MedControlApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "medcontrolappnovo",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "scheme": "myapp",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.guirocha.MedControlApp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "dev.guirocha.MedControlApp"
     },
     "web": {
-      "bundler": "metro",
-      "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

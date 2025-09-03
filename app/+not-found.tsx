@@ -1,40 +1,65 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+// app/_layout.tsx
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { RootSiblingParent } from 'react-native-root-siblings';
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { useMedicationStore } from "@/hooks/useMedicationStore";
+import { useDoseHistoryStore } from "@/hooks/useDoseHistoryStore";
+import { registerForPushNotificationsAsync } from "@/lib/notifications";
 
-import { Text, View } from '@/components/Themed';
+SplashScreen.preventAutoHideAsync();
 
-export default function NotFoundScreen() {
+function RootLayoutNav() {
   return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
-        </Link>
-      </View>
-    </>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="welcome" options={{ headerShown: false }} />
+      <Stack.Screen name="register" options={{ title: "Criar Conta" }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      
+      {/* CORREÇÃO: Adicionamos esta linha para registrar o grupo de modais */}
+      <Stack.Screen 
+        name="(modals)/add-medication" 
+        options={{ presentation: 'modal', headerShown: false }} 
+      />
+      
+      <Stack.Screen 
+        name="medication/[id]" 
+        options={{ presentation: 'modal', title: "Detalhes" }} 
+      />
+    </Stack>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
-});
+export default function RootLayout() {
+  const loadMedications = useMedicationStore(state => state.loadMedications);
+  // A correção está aqui: o loadHistory agora é do useDoseHistoryStore
+  const loadHistory = useDoseHistoryStore(state => state.loadHistory);
+  const loadUserProfile = useAuthStore(state => state.loadUserProfile);
+  const isMedsLoading = useMedicationStore(state => state.isLoading);
+  const isProfileLoading = useAuthStore(state => state.isLoading);
+  const isHistoryLoading = useDoseHistoryStore(state => state.isLoadingHistory);
+
+  useEffect(() => {
+    loadMedications();
+    loadHistory();
+    loadUserProfile();
+    registerForPushNotificationsAsync();
+  }, []);
+
+  useEffect(() => {
+    if (!isMedsLoading && !isProfileLoading && !isHistoryLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [isMedsLoading, isProfileLoading, isHistoryLoading]);
+
+  return (
+    <RootSiblingParent>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <RootLayoutNav />
+      </GestureHandlerRootView>
+    </RootSiblingParent>
+  );
+}
