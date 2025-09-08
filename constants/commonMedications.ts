@@ -17,4 +17,6 @@ export const COMMON_MEDICATIONS = [
     { name: 'Dramin', dosage: '50mg' },
     { name: 'Buscopan', dosage: '10mg' },
     { name: 'Estomazil', dosage: '1 envelope' },
+
+    
   ];

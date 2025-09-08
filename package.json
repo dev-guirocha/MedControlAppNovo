@@ -34,7 +34,9 @@
     "react-native-screens": "3.31.1",
     "react-native-svg": "15.2.0",
     "zustand": "^4.5.7",
-    "expo-image-picker": "~15.1.0"
+    "expo-image-picker": "~15.1.0",
+    "expo-print": "~13.0.1",
+    "expo-crypto": "~13.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

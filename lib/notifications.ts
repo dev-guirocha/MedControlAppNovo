@@ -47,58 +47,34 @@ export async function registerForPushNotificationsAsync() {
 
 export async function scheduleMedicationNotifications(medication: Medication) {
   await cancelMedicationNotifications(medication.id);
+
+  // Não agendar notificações para medicamentos "quando necessário"
+  if (medication.frequency === 'quando necessário') {
+    return;
+  }
+
   for (const time of medication.times) {
     const [hour, minute] = time.split(':').map(Number);
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '💊 Lembrete de Medicamento',
-        body: `Está na hora de tomar seu ${medication.name} (${medication.dosage}).`,
+        // Título mais direto
+        title: `Hora de tomar: ${medication.name}`,
+        // Corpo com mais detalhes
+        body: `Toque para ver detalhes ou registrar a dose.`,
+        // Subtítulo para contexto (ótimo no iOS)
+        subtitle: `Lembrete de Medicamento 💊`,
         sound: 'default',
         data: { medicationId: medication.id },
-        categoryIdentifier: MEDICATION_REMINDER_CATEGORY_ID,
+        categoryIdentifier: 'medication-reminder',
+        // Cor para o ícone no Android
+        color: medication.color || colors.primary,
       },
-      trigger: { hour, minute, repeats: true },
+      trigger: { 
+        hour, 
+        minute, 
+        repeats: true 
+      },
     });
-  }
-}
-
-export async function scheduleStockNotification(medication: Medication) {
-  const identifier = `stock-${medication.id}`;
-  
-  // ✅ Cancelar notificação anterior para este medicamento
-  await Notifications.cancelScheduledNotificationAsync(identifier);
-
-  // ✅ Só agendar se o estoque estiver baixo (<= 5 unidades)
-  if (medication.stock <= 5) {
-    try {
-      // ✅ PARA TESTES - Notificação em 10 segundos
-      await Notifications.scheduleNotificationAsync({
-        identifier,
-        content: {
-          title: '⚠️ Alerta de Estoque Baixo',
-          body: `Seu medicamento ${medication.name} está acabando. Restam apenas ${medication.stock} unidades.`,
-          sound: 'default',
-          categoryIdentifier: STOCK_ALERT_CATEGORY_ID,
-          data: { medicationId: medication.id, type: 'stock_alert' },
-        },
-        // ✅ TESTE RÁPIDO - 10 segundos
-        trigger: { 
-          hour: 8, // Horários fixos para o alerta
-          minute: 0,
-          seconds: 0,
-          repeats: false,
-        },
-      });
-      
-      console.log(`📢 Alerta de estoque AGENDADO para: ${medication.name} em 10 segundos`);
-      
-    } catch (error) {
-      console.error('❌ Erro ao agendar alerta de estoque:', error);
-    }
-  } else {
-    console.log(`✅ Estoque suficiente (${medication.stock}) para: ${medication.name}`);
-    // ✅ Cancelar alerta se estoque voltou ao normal
-    await cancelStockNotification(medication.id);
   }
 }
 
@@ -112,7 +88,6 @@ export async function cancelMedicationNotifications(medicationId: string) {
   await cancelStockNotification(medicationId);
 }
 
-// NOVO: Adicione uma função para cancelar apenas a notificação de estoque
 export async function cancelStockNotification(medicationId: string) {
     const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
     for (const notification of scheduledNotifications) {
@@ -120,4 +95,33 @@ export async function cancelStockNotification(medicationId: string) {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
       }
     }
+}
+
+// ✅ Função unificada e corrigida, agora usando o `stockAlertThreshold`
+export async function scheduleStockNotification(medication: Medication) {
+  const identifier = `stock-${medication.id}`;
+  await Notifications.cancelScheduledNotificationAsync(identifier);
+
+  if (medication.stock <= medication.stockAlertThreshold) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier,
+        content: {
+          title: '⚠️ Alerta de Estoque Baixo',
+          body: `Seu medicamento ${medication.name} está acabando. Restam apenas ${medication.stock} unidades.`,
+          sound: 'default',
+          categoryIdentifier: STOCK_ALERT_CATEGORY_ID,
+          data: { medicationId: medication.id, type: 'stock_alert' },
+        },
+        trigger: {
+          seconds: 1, // Envia imediatamente quando o estoque for atualizado
+        },
+      });
+      console.log(`📢 Alerta de estoque AGENDADO para: ${medication.name}`);
+    } catch (error) {
+      console.error('❌ Erro ao agendar alerta de estoque:', error);
+    }
+  } else {
+    console.log(`✅ Estoque suficiente (${medication.stock}) para: ${medication.name}`);
+  }
 }

@@ -41,12 +41,12 @@ export default function AddMedicationScreen() {
         </View>
 
         <View style={styles.secondaryOption}>
-          <Button 
-            title="Registrar Dose Avulsa" 
-            onPress={handleLogAsNeeded} 
-            size="medium" 
-            variant="secondary" 
-            icon={<CheckCircle size={20} color={colors.primary} />}
+          <Button
+            title="Registrar Dose Avulsa"
+            onPress={handleLogAsNeeded}
+            size="medium"
+            variant="secondary"
+            iconName="Check-circle" // Correção: de icon para iconName
           />
         </View>
       </View>

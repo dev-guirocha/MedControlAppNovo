@@ -90,9 +90,35 @@ export default function ConfirmMedicationScreen() {
         </View>
       </ScrollView>
       <View style={styles.footer}>
-        <Button title="Corrigir" onPress={handleCorrect} size="medium" variant="secondary" icon={<X size={20} color={colors.primary} />} style={styles.correctButton}/>
-        <Button title="Salvar" onPress={handleConfirm} size="medium" variant="success" loading={loading} icon={<Check size={20} color={colors.background} />} style={styles.confirmButton}/>
+        <Button
+          title="Corrigir"
+          onPress={handleCorrect}
+          size="medium"
+          variant="secondary"
+          iconName="x" // Correção: "x" para "X"
+          style={styles.correctButton}
+        />
+        <Button
+          title="Salvar"
+          onPress={handleConfirm}
+          size="medium"
+          variant="success"
+          loading={loading}
+          iconName="check" // Correção: "check" para "Check"
+          style={styles.confirmButton}
+        />
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg },
+  card: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  field: { paddingVertical: spacing.md },
+  divider: { height: 1, backgroundColor: colors.border },
+  footer: { flexDirection: 'row', padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md },
+  correctButton: { flex: 1 },
+  confirmButton: { flex: 2 },
+});

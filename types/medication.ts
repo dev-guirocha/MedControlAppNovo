@@ -39,9 +39,10 @@ export interface Appointment {
   doctorName: string;
   specialty: string;
   location: string;
-  date: string; // Guardaremos a data como uma string no formato ISO (ex: "2025-12-25T14:30:00.000Z")
+  date: string;
   notes?: string;
   createdAt: string;
+  recipeImageUrl?: string; // ✅ NOVO CAMPO ADICIONADO
 }
 
 export interface Anamnesis {
@@ -59,3 +60,10 @@ export interface Anamnesis {
   otherNotes?: string;
   lastUpdated: string;
 }
+
+export type ScheduledDose = Medication & {
+  doseId: string;
+  scheduledTime: string;
+  scheduledDateTime: Date;
+  isToday: boolean;
+};

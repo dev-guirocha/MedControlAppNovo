@@ -10,6 +10,7 @@ export const colors = {
   success: '#10B981',
   warning: '#F59E0B',
   danger: '#EF4444',
+  gray: '#808080',
 };
 
 export const medicationColors = [ '#2D6A9F', '#EF4444', '#F59E0B', '#10B981', '#6366F1', '#8B5CF6', '#EC4899' ];

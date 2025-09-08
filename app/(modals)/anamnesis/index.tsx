@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { useAnamnesisStore } from '@/hooks/useAnamnesisStore';
@@ -58,8 +58,18 @@ export default function AnamnesisScreen() {
   
   const handleExport = async () => {
     setIsExporting(true);
-    await exportAnamnesis();
+    // ✅ A função do store agora retorna um booleano
+    const success = await exportAnamnesis(formData);
     setIsExporting(false);
+
+    // ✅ A lógica do Alert agora vive no componente
+    if (!success) {
+      Alert.alert(
+        'Atenção', 
+        'É necessário preencher pelo menos um campo do questionário para poder exportar o arquivo.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const dynamicStyles = StyleSheet.create({
@@ -84,7 +94,7 @@ export default function AnamnesisScreen() {
             {formData.chronicConditions.map((condition, index) => (
               <TextInput
                 key={index}
-                style={[styles.input, dynamicStyles.input]}
+                style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={condition}
                 onChangeText={(text) => handleArrayChange('chronicConditions', index, text)}
                 placeholder="Ex: Hipertensão, Diabetes"
@@ -101,7 +111,7 @@ export default function AnamnesisScreen() {
             {formData.allergies.map((allergy, index) => (
               <TextInput
                 key={index}
-                style={[styles.input, dynamicStyles.input]}
+                style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={allergy}
                 onChangeText={(text) => handleArrayChange('allergies', index, text)}
                 placeholder="Ex: Dipirona, Pólen"
@@ -119,7 +129,7 @@ export default function AnamnesisScreen() {
             {formData.surgeries.map((surgery, index) => (
               <TextInput
                 key={index}
-                style={[styles.input, dynamicStyles.input]}
+                style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={surgery}
                 onChangeText={(text) => handleArrayChange('surgeries', index, text)}
                 placeholder="Ex: Apendicectomia (2020)"
@@ -135,22 +145,22 @@ export default function AnamnesisScreen() {
           <View style={styles.inputGroup}>
             <CheckboxItem 
               label="Hipertensão" 
-              value={formData.familyHistory.hypertension} 
+              value={formData.familyHistory.hypertension || false} 
               onValueChange={(v) => setFormData(prev => ({ ...prev, familyHistory: { ...prev.familyHistory, hypertension: v } }))} 
             />
             <CheckboxItem 
               label="Diabetes" 
-              value={formData.familyHistory.diabetes} 
+              value={formData.familyHistory.diabetes || false} 
               onValueChange={(v) => setFormData(prev => ({ ...prev, familyHistory: { ...prev.familyHistory, diabetes: v } }))} 
             />
             <CheckboxItem 
               label="Doenças Cardíacas" 
-              value={formData.familyHistory.heartDisease} 
+              value={formData.familyHistory.heartDisease || false} 
               onValueChange={(v) => setFormData(prev => ({ ...prev, familyHistory: { ...prev.familyHistory, heartDisease: v } }))} 
             />
             <CheckboxItem 
               label="Câncer" 
-              value={formData.familyHistory.cancer} 
+              value={formData.familyHistory.cancer || false} 
               onValueChange={(v) => setFormData(prev => ({ ...prev, familyHistory: { ...prev.familyHistory, cancer: v } }))} 
             />
             <TextInput
@@ -176,7 +186,7 @@ export default function AnamnesisScreen() {
       </KeyboardAwareScrollView>
       
       <View style={[styles.footer, styles.footerWithExport]}>
-        <Button title="Salvar Questionário" onPress={handleSave} size="large" variant="success" loading={loading} style={styles.saveButton} />
+        <Button title="Salvar" onPress={handleSave} size="large" variant="success" loading={loading} style={styles.saveButton} />
         <Button title="Exportar" onPress={handleExport} size="large" variant="secondary" loading={isExporting} />
       </View>
     </SafeAreaView>
@@ -185,17 +195,17 @@ export default function AnamnesisScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl },
-  footer: { flexDirection: 'row', padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxl },
+  footer: { flexDirection: 'row', padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md },
   footerWithExport: { justifyContent: 'space-between' },
   saveButton: { flex: 1 },
-  subtitle: { color: colors.textSecondary, marginBottom: spacing.xxl },
+  subtitle: { color: colors.textSecondary, marginBottom: spacing.lg, fontSize: 16, lineHeight: 24 },
   inputGroup: { marginBottom: spacing.lg },
   label: { fontWeight: '500', color: colors.text, marginBottom: spacing.sm },
   input: { borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, color: colors.text, backgroundColor: colors.cardBackground, minHeight: 56 },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
-  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, gap: spacing.xs, padding: spacing.md, borderRadius: 12, backgroundColor: colors.cardBackground },
+  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, gap: spacing.xs, padding: spacing.md, borderRadius: 12, backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border },
   addButtonText: { color: colors.primary, fontWeight: '500' },
   checkboxContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, },
-  checkboxLabel: { color: colors.text },
+  checkboxLabel: { color: colors.text, fontSize: 16 },
 });

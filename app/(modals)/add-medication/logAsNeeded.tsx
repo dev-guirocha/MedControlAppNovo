@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
-import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Medication } from '@/types/medication';
 import Toast from 'react-native-root-toast';
@@ -36,8 +35,8 @@ const AsNeededMedicationItem = ({ item, onPress, fontScale }: { item: ListItem, 
 
 export default function LogAsNeededScreen() {
   const router = useRouter();
-  const { medications, addMedication } = useMedicationStore();
-  const { logDose } = useDoseHistoryStore();
+  // ✅ CORREÇÃO: `logDose` vem do useMedicationStore
+  const { medications, addMedication, logDose } = useMedicationStore();
   const { fontScale } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -47,23 +46,42 @@ export default function LogAsNeededScreen() {
     if (existingMed) {
       await logDose(existingMed.id, new Date(), 'taken');
       Alert.alert('Sucesso!', `${existingMed.name} registrado com sucesso!`);
+      router.replace('/(tabs)/home'); // ✅ CORREÇÃO: Adicionada a navegação de volta
     } else {
-      const newMedicationData = {
-        name: item.name,
-        dosage: item.dosage,
-        form: 'comprimido' as const,
-        frequency: 'quando necessário' as const,
-        times: [],
-        stock: 1,
-        stockAlertThreshold: 0,
-        instructions: 'Tomar quando necessário.',
-      };
-      const newMed = await addMedication(newMedicationData);
-      await logDose(newMed.id, new Date(), 'taken');
-      Alert.alert('Sucesso!', `${newMed.name} foi adicionado à sua lista e a primeira dose foi registrada!`);
+      Alert.alert(
+        'Adicionar Novo Medicamento',
+        `O medicamento "${item.name}" não está na sua lista. Deseja adicioná-lo e registrar a primeira dose?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Adicionar',
+            onPress: async () => {
+              // ✅ CORREÇÃO: Preenche os dados do novo medicamento
+              const newMedicationData = {
+                name: item.name,
+                dosage: item.dosage,
+                form: 'comprimido' as const,
+                frequency: 'quando necessário' as const,
+                times: [],
+                stock: 1, // Começa com 1 para a dose que está sendo tomada
+                stockAlertThreshold: 0,
+                instructions: 'Tomar quando necessário.',
+              };
+              const newMed = await addMedication(newMedicationData);
+              // O `addMedication` agora retorna o novo medicamento. Podemos usá-lo para registrar a dose.
+              // Note que o logDose já subtrai 1 do estoque, então o estoque final será 0.
+              await logDose(newMed.id, new Date(), 'taken');
+              Toast.show(`${newMed.name} foi adicionado e a dose registrada!`, {
+                 duration: Toast.durations.LONG,
+                 backgroundColor: colors.success,
+                 textColor: colors.background,
+              });
+              router.replace('/(tabs)/home');
+            },
+          },
+        ]
+      );
     }
-    
-    router.replace('/(tabs)/home'); 
   };
 
   const combinedList = useMemo(() => {

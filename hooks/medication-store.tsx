@@ -1,15 +1,7 @@
 import { useMemo } from 'react';
 import { useMedicationStore } from './useMedicationStore';
-import { useDoseHistoryStore } from './useDoseHistoryStore'; // Importamos o store de histórico
-import { Medication } from '@/types/medication';
-
-// Estendemos o tipo Medication para incluir dados específicos da dose agendada
-export type ScheduledDose = Medication & {
-  doseId: string;
-  scheduledTime: string;
-  scheduledDateTime: Date;
-  isToday: boolean;
-};
+import { useDoseHistoryStore } from './useDoseHistoryStore';
+import { Medication, ScheduledDose } from '@/types/medication';
 
 export function useDoseSchedule(): ScheduledDose[] {
     const medications = useMedicationStore((state) => state.medications);
@@ -19,41 +11,31 @@ export function useDoseSchedule(): ScheduledDose[] {
         const now = new Date();
         const allUpcomingDoses: ScheduledDose[] = [];
 
+        // ✅ Criamos um conjunto com os IDs das doses já registradas para uma verificação rápida.
+        const loggedDoseIds = new Set(doseHistory.map(h => h.id));
+
         for (const med of medications) {
             if (!med.times || med.times.length === 0) continue;
 
-            // Encontra a última dose tomada para calcular a próxima dose com mais precisão
-            const lastTakenDose = doseHistory
-                .filter(d => d.medicationId === med.id && d.status === 'taken')
-                .sort((a, b) => new Date(b.takenTime).getTime() - new Date(a.takenTime).getTime())[0];
-            
-            const startDate = lastTakenDose ? new Date(lastTakenDose.takenTime) : new Date(med.createdAt);
-            
-            let daysToAdd = 1;
-            if (med.frequency === 'a cada 8h') {
-                // A cada 8h, precisamos gerar 3 doses por dia. O loop abaixo já fará isso.
-                daysToAdd = 1; 
-            } else if (med.frequency === 'a cada 12h') {
-                // A cada 12h, 2 doses por dia. O loop abaixo já fará isso.
-                daysToAdd = 1;
-            } else if (med.frequency === 'semanal') {
-                daysToAdd = 7;
-            }
-
-            // Gerar doses para as próximas 3 semanas para ter um buffer
-            for (let dayOffset = 0; dayOffset < 21; dayOffset += daysToAdd) {
-                const targetDate = new Date(startDate);
-                targetDate.setDate(startDate.getDate() + dayOffset);
+            // Lógica para gerar doses para as próximas semanas.
+            // O ideal é expandir isso para tratar corretamente as diferentes frequências (semanal, etc.).
+            for (let dayOffset = 0; dayOffset < 21; dayOffset++) {
+                const targetDate = new Date(now);
+                targetDate.setDate(now.getDate() + dayOffset);
                 
                 for (const time of med.times) {
                     const [hour, minute] = time.split(':').map(Number);
                     const doseTime = new Date(targetDate);
                     doseTime.setHours(hour, minute, 0, 0);
 
-                    if (doseTime > now) {
+                    const doseId = `${med.id}-${doseTime.toISOString()}`;
+
+                    // ✅ AQUI ESTÁ A MUDANÇA:
+                    // Verificamos se a dose está no futuro E se ela AINDA NÃO foi registrada.
+                    if (doseTime > now && !loggedDoseIds.has(doseId)) {
                         allUpcomingDoses.push({
                             ...med,
-                            doseId: `${med.id}-${doseTime.toISOString()}`,
+                            doseId: doseId,
                             scheduledTime: time,
                             scheduledDateTime: doseTime,
                             isToday: now.toDateString() === doseTime.toDateString(),

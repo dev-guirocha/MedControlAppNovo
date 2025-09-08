@@ -4,16 +4,21 @@ import React from 'react';
 
 export default function AddAppointmentLayout() {
   return (
-    <Stack>
-      <Stack.Screen 
-        name="index" 
-        options={{ 
-          title: 'Adicionar Consulta',
-          headerBackTitleVisible: false,
-          headerTitleStyle: { color: colors.text },
-          headerTintColor: colors.primary,
-          headerShown: true,
-        }} 
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.primary,
+        headerBackTitleVisible: false,
+        headerTitleStyle: { color: colors.text },
+        // ✅ Aplica uma cor de fundo ao contêiner do modal para uma transição suave
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: 'Nova Consulta',
+        }}
       />
     </Stack>
   );

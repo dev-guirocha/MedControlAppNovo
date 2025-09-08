@@ -2,112 +2,122 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleMedicationNotifications, cancelMedicationNotifications, scheduleStockNotification } from '@/lib/notifications';
 import { Medication, DoseHistory } from '@/types/medication';
-
-const MEDS_KEY = '@medications';
-const HISTORY_KEY = '@dose_history'; // ✅ Adicionar chave para histórico
+import { useDoseHistoryStore } from './useDoseHistoryStore';
+import { MEDS_KEY } from '../src/constants/keys';
+import { showErrorToast } from '@/lib/toastHelper';
+import * as Crypto from 'expo-crypto';
 
 interface MedicationState {
   medications: Medication[];
-  doseHistory: DoseHistory[]; // ✅ Adicionar histórico ao estado
-  isLoading: boolean;
   loadMedications: () => Promise<void>;
-  loadHistory: () => Promise<void>; // ✅ Adicionar carregamento do histórico
   addMedication: (medication: Omit<Medication, 'id' | 'createdAt'>) => Promise<Medication>;
   updateMedication: (id: string, updates: Partial<Omit<Medication, 'id'>>) => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
-  logDose: (medicationId: string, time: Date, status: 'taken' | 'skipped') => Promise<void>; // ✅ Adicionar função logDose
+  logDose: (medicationId: string, scheduledTime: Date, status: 'taken' | 'skipped') => Promise<void>;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
-  doseHistory: [], // ✅ Inicializar histórico vazio
-  isLoading: true,
-
+  
   loadMedications: async () => {
     try {
       const storedMeds = await AsyncStorage.getItem(MEDS_KEY);
       if (storedMeds) set({ medications: JSON.parse(storedMeds) });
     } catch (error) {
       console.error('Error loading meds:', error);
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  // ✅ Nova função para carregar histórico
-  loadHistory: async () => {
-    try {
-      const storedHistory = await AsyncStorage.getItem(HISTORY_KEY);
-      if (storedHistory) set({ doseHistory: JSON.parse(storedHistory) });
-    } catch (error) {
-      console.error('Error loading history:', error);
     }
   },
 
   addMedication: async (data) => {
-    const newMed: Medication = { ...data, id: Date.now().toString(), createdAt: new Date().toISOString() };
-    const updatedMeds = [...get().medications, newMed];
-    set({ medications: updatedMeds });
-    await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
-    await scheduleMedicationNotifications(newMed);
-    await scheduleStockNotification(newMed);
-    return newMed;
+    const newMed: Medication = { ...data, id: Crypto.randomUUID(), createdAt: new Date().toISOString() };
+    try {
+      const updatedMeds = [...get().medications, newMed];
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+      await scheduleMedicationNotifications(newMed);
+      await scheduleStockNotification(newMed);
+      return newMed;
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      showErrorToast('Erro ao adicionar o medicamento.');
+      // No caso de erro, retornamos o objeto original sem ID para evitar que a UI quebre
+      return { ...data, id: '', createdAt: '' };
+    }
   },
 
   updateMedication: async (id, updates) => {
     let toUpdate: Medication | undefined;
     const updatedMeds = get().medications.map(m => (m.id === id ? (toUpdate = { ...m, ...updates }) : m));
-    set({ medications: updatedMeds });
-    await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
-    
-    if (toUpdate) {
-      await scheduleMedicationNotifications(toUpdate);
-
-      if (updates.stock !== undefined) {
-        await scheduleStockNotification(toUpdate);
+    try {
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+      if (toUpdate) {
+        await scheduleMedicationNotifications(toUpdate);
+        if (updates.stock !== undefined) {
+          await scheduleStockNotification(toUpdate);
+        }
       }
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      showErrorToast('Erro ao atualizar o medicamento.');
     }
   },
 
   deleteMedication: async (id) => {
     const updatedMeds = get().medications.filter(m => m.id !== id);
-    set({ medications: updatedMeds });
-    await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
-    await cancelMedicationNotifications(id);
+    try {
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+      await cancelMedicationNotifications(id);
+    } catch (error) {
+      console.error('Error deleting medication:', error);
+      showErrorToast('Erro ao excluir o medicamento.');
+    }
   },
 
-  // ✅ Nova função para registrar doses
-  logDose: async (medicationId: string, time: Date, status: 'taken' | 'skipped') => {
-    const med = get().medications.find(m => m.id === medicationId);
-    if (!med) return;
-    
+  // ✅ FUNÇÃO logDose TOTALMENTE REFATORADA
+  logDose: async (medicationId: string, scheduledTime: Date, status: 'taken' | 'skipped') => {
+    const medications = get().medications;
+    const medIndex = medications.findIndex(m => m.id === medicationId);
+    if (medIndex === -1) {
+      console.error('Medication not found for logging dose:', medicationId);
+      return;
+    }
+    const med = medications[medIndex];
+
+    // 1. Criar e salvar a entrada no histórico primeiro
     const newEntry: DoseHistory = {
-      id: `${medicationId}-${time.toISOString()}`,
+      id: `${medicationId}-${scheduledTime.toISOString()}`,
       medicationId: medicationId,
       medicationName: med.name,
-      scheduledTime: time.toISOString(),
+      scheduledTime: scheduledTime.toISOString(),
       status,
       takenTime: status === 'taken' ? new Date().toISOString() : undefined,
     };
-    
-    const updatedHistory = [...get().doseHistory, newEntry];
-    set({ doseHistory: updatedHistory });
-    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+    await useDoseHistoryStore.getState().addDoseEntry(newEntry);
 
-    // Atualiza o estoque e lastTaken se a dose foi tomada
-    if (status === 'taken') {
-      const updates: Partial<Medication> = {
-        lastTaken: new Date().toISOString(),
-      };
-      
-      if (med.stock > 0) {
-        updates.stock = med.stock - 1;
-      }
-      
-      await get().updateMedication(medicationId, updates);
+    // Se a dose foi apenas pulada, não há necessidade de atualizar o medicamento
+    if (status === 'skipped') {
+      return;
+    }
+
+    // 2. Se a dose foi tomada, calcular o novo estado do medicamento
+    const updatedMed = {
+      ...med,
+      stock: med.stock > 0 ? med.stock - 1 : 0,
+    };
+    const updatedMeds = [...medications];
+    updatedMeds[medIndex] = updatedMed;
+
+    // 3. Atualizar o estado e persistir os dados
+    try {
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+      // 4. Disparar a verificação de notificação de estoque
+      await scheduleStockNotification(updatedMed);
+    } catch (error) {
+      console.error('Error saving medication after logging dose:', error);
+      showErrorToast('Erro ao atualizar o estoque do medicamento.');
     }
   },
 }));
-
-// ✅ Exportar alias para compatibilidade
-export const useMedications = useMedicationStore;

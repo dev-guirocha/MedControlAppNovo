@@ -9,7 +9,7 @@ import { User, Image as ImageIcon } from 'lucide-react-native';
 
 export default function EditProfileScreen() {
     const router = useRouter();
-    const { userProfile, updateUserProfile, isLoading } = useAuthStore();
+    const { userProfile, updateUserProfile } = useAuthStore();
     const fontSize = getFontSize(useAuthStore.getState().fontScale);
     const [name, setName] = useState(userProfile?.name || '');
     const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function EditProfileScreen() {
         router.back();
     };
 
-    if (isLoading || !userProfile) {
+    if (!userProfile) {
         return (
             <SafeAreaView style={styles.container}>
                 <ActivityIndicator size="large" color={colors.primary} />

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, SafeAreaView, FlatList } from 'react-native';
+import { View, StyleSheet, SafeAreaView, FlatList, ActivityIndicator } from 'react-native';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { DoseHistory } from '@/types/medication';
@@ -49,9 +49,11 @@ export default function HistoryScreen() {
     const historyByDay: { [key: string]: DoseHistory[] } = {};
 
     doseHistory.forEach(item => {
-      const date = new Date(item.scheduledTime).toISOString().split('T')[0];
-      if (!historyByDay[date]) historyByDay[date] = [];
-      historyByDay[date].push(item);
+      if (item.scheduledTime && !isNaN(Date.parse(item.scheduledTime))) {
+        const date = new Date(item.scheduledTime).toISOString().split('T')[0];
+        if (!historyByDay[date]) historyByDay[date] = [];
+        historyByDay[date].push(item);
+      }
     });
 
     for (const date in historyByDay) {
@@ -78,7 +80,7 @@ export default function HistoryScreen() {
 
   const selectedDayHistory = useMemo(() => {
       return doseHistory.filter(item => {
-          return new Date(item.scheduledTime).toISOString().split('T')[0] === selectedDate;
+          return item.scheduledTime && !isNaN(Date.parse(item.scheduledTime)) && new Date(item.scheduledTime).toISOString().split('T')[0] === selectedDate;
       }).sort((a,b) => new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime());
   }, [doseHistory, selectedDate]);
   
@@ -102,7 +104,7 @@ export default function HistoryScreen() {
       textMonthFontSize: 18,
       textDayHeaderFontSize: 14,
   };
-
+  
   return (
     <SafeAreaView style={styles.container}>
       <Calendar

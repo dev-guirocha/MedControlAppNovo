@@ -1,155 +1,98 @@
 import React from 'react';
-import { 
-  TouchableOpacity, 
-  Text, 
-  StyleSheet, 
-  ActivityIndicator, 
-  ViewStyle,
-  View,
-  AccessibilityProps 
-} from 'react-native';
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { icons } from 'lucide-react-native';
+import { colors } from '@/constants/theme';
+import { ButtonProps } from '@/types/button';
 
-interface ButtonProps extends AccessibilityProps {
-  title: string;
-  onPress: () => void;
-  variant?: 'primary' | 'success' | 'danger' | 'secondary';
-  size?: 'small' | 'medium' | 'large';
-  disabled?: boolean;
-  loading?: boolean;
-  style?: ViewStyle;
-  icon?: React.ReactNode;
-  accessibilityLabel?: string;
-  accessibilityHint?: string;
-}
-
-export function Button({ 
-  title, 
-  onPress, 
-  variant = 'primary', 
-  size = 'medium', 
-  disabled = false, 
-  loading = false, 
-  style, 
-  icon,
-  accessibilityLabel,
-  accessibilityHint,
-  ...accessibilityProps 
+export function Button({
+  onPress,
+  title,
+  variant = 'primary',
+  loading = false,
+  disabled = false,
+  iconName,
+  style,
+  ...props
 }: ButtonProps) {
+  const isDisabled = disabled || loading;
+  const isSecondary = variant === 'secondary';
+  const isSuccess = variant === 'success';
+  const isDanger = variant === 'danger';
+
+  const IconComponent = iconName ? icons[iconName] : null;
+  const hasValidIcon = !!IconComponent;
+
   const buttonStyles = [
-    styles.button, 
-    styles[variant], 
-    styles[size], 
-    (disabled || loading) && styles.disabled, 
-    style
-  ];
-  
-  const textStyles = [
-    styles.text, 
-    styles[`${size}Text`], 
-    variant === 'secondary' && styles.secondaryText
+    styles.buttonBase,
+    variant === 'primary' && styles.primaryButton,
+    isSecondary && styles.secondaryButton,
+    isSuccess && styles.successButton,
+    isDanger && styles.dangerButton,
+    isDisabled && styles.disabledButton,
   ];
 
-  const getActivityIndicatorColor = () => {
-    if (variant === 'secondary') return colors.primary;
-    if (variant === 'danger') return colors.background;
-    return colors.background;
-  };
+  const textStyles = [
+    styles.textBase,
+    variant === 'primary' && styles.primaryText,
+    isSecondary && styles.secondaryText,
+    isSuccess && styles.successText,
+    isDanger && styles.dangerText,
+    isDisabled && styles.disabledText,
+  ];
+
+  const iconColor = isSecondary ? colors.primary : colors.background;
 
   return (
-    <TouchableOpacity
-      style={buttonStyles}
-      onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
-      accessibilityLabel={accessibilityLabel || title}
-      accessibilityHint={accessibilityHint}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading }}
-      {...accessibilityProps}
-    >
-      {loading ? (
-        <ActivityIndicator 
-          color={getActivityIndicatorColor()} 
-          size="small" 
-          accessibilityLabel="Carregando"
-        />
-      ) : (
-        <View style={styles.content}>
-          {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text style={textStyles} numberOfLines={1} adjustsFontSizeToFit>
-            {title}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    <Pressable
+        style={({ pressed }) => [
+            ...buttonStyles,
+            style,
+            pressed && !isDisabled && styles.pressedButton,
+        ]}
+        onPress={onPress}
+        disabled={isDisabled}
+        accessibilityLabel={loading ? 'Carregando' : title}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
+        {...props}
+      >
+        {loading ? (
+          <ActivityIndicator color={iconColor} />
+        ) : (
+          <>
+            {hasValidIcon && IconComponent && (
+              <IconComponent
+                size={18}
+                color={iconColor}
+                style={styles.icon}
+              />
+            )}
+            <Text style={textStyles}>{title}</Text>
+          </>
+        )}
+      </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  button: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    borderRadius: 12, 
-    gap: spacing.sm,
-    minWidth: 64,
-  },
-  content: {
+  buttonBase: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
   },
-  iconContainer: {
-    marginRight: spacing.xs,
-  },
-  primary: { 
-    backgroundColor: colors.primary,
-  },
-  success: { 
-    backgroundColor: colors.success,
-  },
-  danger: { 
-    backgroundColor: colors.danger,
-  },
-  secondary: { 
-    backgroundColor: colors.background, 
-    borderWidth: 2, 
-    borderColor: colors.primary,
-  },
-  small: { 
-    paddingVertical: spacing.sm, 
-    paddingHorizontal: spacing.md, 
-    minHeight: 40,
-  },
-  medium: { 
-    paddingVertical: spacing.md, 
-    paddingHorizontal: spacing.lg, 
-    minHeight: 56,
-  },
-  large: { 
-    paddingVertical: spacing.lg, 
-    paddingHorizontal: spacing.xl, 
-    minHeight: 64,
-  },
-  disabled: { 
-    opacity: 0.6,
-  },
-  text: { 
-    color: colors.background, 
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  secondaryText: { 
-    color: colors.primary,
-  },
-  smallText: { 
-    fontSize: fontSize.sm,
-  },
-  mediumText: { 
-    fontSize: fontSize.md,
-  },
-  largeText: { 
-    fontSize: fontSize.lg,
-  },
+  primaryButton: { backgroundColor: colors.primary },
+  secondaryButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.text },
+  successButton: { backgroundColor: colors.success },
+  dangerButton: { backgroundColor: colors.danger },
+  disabledButton: { opacity: 0.6 },
+  pressedButton: { opacity: 0.8 },
+  textBase: { fontSize: 16, fontWeight: '600' },
+  primaryText: { color: colors.background },
+  secondaryText: { color: colors.text },
+  successText: { color: colors.background },
+  dangerText: { color: colors.background },
+  disabledText: { color: colors.textSecondary },
+  icon: { marginRight: 8 },
 });
