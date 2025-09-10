@@ -45,14 +45,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  updateUserProfile: async (profile: Partial<UserProfile>) => {
+  updateUserProfile: async (updates: Partial<UserProfile>) => {
     try {
-      // ...
+      const currentProfile = get().userProfile;
+      // Se não houver perfil, não faz nada (isso não deve acontecer no fluxo de onboarding)
+      if (!currentProfile) return;
+
+      const updatedProfile = { ...currentProfile, ...updates };
       await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
       set({ userProfile: updatedProfile });
     } catch (error) { 
       console.error('Error updating user profile:', error); 
-      showErrorToast('Erro ao atualizar o perfil.'); // ✅ 2. Adicionar feedback de erro
+      showErrorToast('Erro ao atualizar o perfil.');
     }
   },
   

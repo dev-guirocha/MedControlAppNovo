@@ -11,6 +11,7 @@ export interface Medication {
   instructions?: string;
   doctor?: string;
   createdAt: string;
+  condition: string;
 }
 
 // ... (O resto do arquivo DoseHistory e UserProfile permanece igual)
@@ -32,6 +33,8 @@ export interface UserProfile {
   photoUrl?: string; // <-- NOVO: URL da foto de perfil
   email?: string;
   phone?: string;
+  gender?: 'male' | 'female' | 'other' | 'preferNotToSay';
+  birthYear?: number;
 }
 
 export interface Appointment {
@@ -42,7 +45,7 @@ export interface Appointment {
   date: string;
   notes?: string;
   createdAt: string;
-  recipeImageUrl?: string; // ✅ NOVO CAMPO ADICIONADO
+  recipeImageUrl?: string;
 }
 
 export interface Anamnesis {

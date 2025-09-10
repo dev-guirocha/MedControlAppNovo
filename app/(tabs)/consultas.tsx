@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, SafeAreaView, FlatList, Alert, ActivityIndicator, TouchableOpacity, Animated, Text as DefaultText } from 'react-native';
+import { View, StyleSheet, SafeAreaView, SectionList, Alert, ActivityIndicator, TouchableOpacity, Animated, Text as DefaultText } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { colors, getFontSize, spacing } from '@/constants/theme';
@@ -10,22 +10,36 @@ import { Text } from '@/components/StyledText';
 import { Plus, Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
 
 // Card da Consulta (sem lógica de arrastar)
-const AppointmentItem = React.memo(({ appointment, onEdit }: { appointment: Appointment; onEdit: (appointment: Appointment) => void; }) => {
+const AppointmentItem = React.memo(({ item, onEdit }: { item: Appointment; onEdit: (item: Appointment) => void; }) => {
     const { fontScale } = useAuthStore();
     const fontSize = getFontSize(fontScale);
+    const isPast = new Date(item.date) < new Date();
+
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isPast && styles.pastCard]}>
         <View style={styles.cardHeader}>
-          <Text style={[styles.doctorName, { fontSize: fontSize.lg }]}>{appointment.doctorName}</Text>
-          <TouchableOpacity onPress={() => onEdit(appointment)} style={styles.editButton}>
-            <Edit size={20} color={colors.primary} />
-          </TouchableOpacity>
+            <Stethoscope size={24} color={isPast ? colors.textSecondary : colors.primary} />
+            <View style={styles.headerTextContainer}>
+                <Text style={[styles.doctorName, { fontSize: fontSize.lg }, isPast && styles.pastText]}>{item.doctorName}</Text>
+                <Text style={[styles.specialty, { fontSize: fontSize.md }, isPast && styles.pastText]}>{item.specialty}</Text>
+            </View>
+            <TouchableOpacity onPress={() => onEdit(item)} style={styles.editButton}>
+                <Edit size={20} color={colors.primary} />
+            </TouchableOpacity>
         </View>
-        <View style={styles.infoRow}><Stethoscope size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{appointment.specialty}</Text></View>
-        <View style={styles.infoRow}><MapPin size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{appointment.location}</Text></View>
-        <View style={styles.infoRow}><Calendar size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{new Date(appointment.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text></View>
-        {appointment.recipeImageUrl && (
-          <TouchableOpacity style={styles.recipeButton}><Receipt size={18} color={colors.primary} /><Text style={styles.recipeButtonText}>Ver Receita Anexada</Text></TouchableOpacity>
+
+        <View style={styles.divider} />
+        
+        <View style={styles.cardBody}>
+            <View style={styles.infoRow}><MapPin size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{item.location}</Text></View>
+            <View style={styles.infoRow}><Calendar size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text></View>
+            {item.notes ? <Text style={[styles.notes, {fontSize: fontSize.sm}]}>Notas: {item.notes}</Text> : null}
+        </View>
+        
+        {item.recipeImageUrl && (
+            <View style={styles.cardFooter}>
+              <TouchableOpacity style={styles.recipeButton}><Receipt size={18} color={colors.primary} /><Text style={styles.recipeButtonText}>Ver Receita</Text></TouchableOpacity>
+            </View>
         )}
       </View>
     );
@@ -60,7 +74,7 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete }: { item: Appointmen
             containerStyle={{ marginBottom: spacing.lg }}
             renderRightActions={renderRightActions}
         >
-            <AppointmentItem appointment={item} onEdit={onEdit} />
+            <AppointmentItem item={item} onEdit={onEdit} />
         </Swipeable>
     );
 };
@@ -69,6 +83,8 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete }: { item: Appointmen
 export default function ConsultasScreen() {
   const router = useRouter();
   const { appointments, deleteAppointment } = useAppointmentStore();
+  const { fontScale } = useAuthStore();
+  const fontSize = getFontSize(fontScale);
 
   const handleAddAppointment = useCallback(() => router.push('/(modals)/add-appointment'), [router]);
 
@@ -84,31 +100,54 @@ export default function ConsultasScreen() {
     );
   }, [deleteAppointment]);
 
-  const sortedAppointments = useMemo(() => [...appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), [appointments]);
+  const sections = useMemo(() => {
+    const now = new Date();
+    const upcoming = appointments.filter(a => new Date(a.date) >= now);
+    const past = appointments.filter(a => new Date(a.date) < now);
+
+    upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const data = [];
+    if (upcoming.length > 0) data.push({ title: 'Próximas Consultas', data: upcoming });
+    if (past.length > 0) data.push({ title: 'Consultas Passadas', data: past });
+    return data;
+  }, [appointments]);
+  
+  if (appointments.length === 0) {
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.emptyState}>
+              <Stethoscope size={64} color={colors.disabled}/>
+              <Text style={[styles.emptyTitle, {fontSize: fontSize.xl}]}>Nenhuma consulta agendada</Text>
+              <Text style={[styles.emptySubtitle, {fontSize: fontSize.md}]}>Toque no botão '+' para adicionar sua primeira consulta.</Text>
+            </View>
+             <TouchableOpacity style={styles.fab} onPress={handleAddAppointment} accessibilityLabel="Adicionar nova consulta">
+                <Plus color="white" size={32} />
+            </TouchableOpacity>
+        </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {sortedAppointments.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Nenhuma consulta agendada</Text>
-          <Text style={styles.emptySubtitle}>Toque no '+' para adicionar sua primeira consulta.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={sortedAppointments}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
+      <SectionList
+        sections={sections}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
             // ✅ Usando o novo componente aqui
             <SwipeableAppointmentItem
               item={item}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
-          )}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
-        />
-      )}
+        )}
+        renderSectionHeader={({ section: { title }}) => (
+            <Text style={[styles.sectionHeader, {fontSize: fontSize.lg}]}>{title}</Text>
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
+      />
       <TouchableOpacity style={styles.fab} onPress={handleAddAppointment} accessibilityLabel="Adicionar nova consulta">
         <Plus color="white" size={32} />
       </TouchableOpacity>
@@ -118,17 +157,25 @@ export default function ConsultasScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  emptyTitle: { fontSize: 22, fontWeight: '600', color: colors.text, marginBottom: spacing.sm, textAlign: 'center' },
-  emptySubtitle: { fontSize: 16, color: colors.textSecondary, textAlign: 'center' },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, paddingBottom: 100 },
+  emptyTitle: { fontWeight: '600', color: colors.text, marginBottom: spacing.sm, textAlign: 'center' },
+  emptySubtitle: { color: colors.textSecondary, textAlign: 'center' },
+  sectionHeader: { fontWeight: 'bold', color: colors.primary, backgroundColor: colors.background, paddingTop: spacing.md, paddingBottom: spacing.sm },
   card: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  pastCard: { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' },
+  pastText: { color: colors.textSecondary },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.md },
-  doctorName: { fontWeight: 'bold', color: colors.text, flex: 1, marginRight: spacing.sm },
+  headerTextContainer: { flex: 1, marginHorizontal: spacing.md },
+  doctorName: { fontWeight: 'bold', color: colors.text },
+  specialty: { color: colors.textSecondary },
   editButton: { padding: spacing.xs },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
+  cardBody: { marginVertical: spacing.sm },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
-  cardText: { color: colors.textSecondary, fontSize: 16, flexShrink: 1 },
-  recipeButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryFaded, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 8, marginTop: spacing.md, alignSelf: 'flex-start' },
+  cardText: { color: colors.text, flexShrink: 1 },
+  notes: { color: colors.textSecondary, fontStyle: 'italic', marginTop: spacing.sm },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md },
+  recipeButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryFaded, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 8, alignSelf: 'flex-start' },
   recipeButtonText: { color: colors.primary, fontWeight: '600' },
   fab: { position: 'absolute', right: 16, bottom: 16, width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
   deleteButton: { backgroundColor: colors.danger, flex: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 16 },

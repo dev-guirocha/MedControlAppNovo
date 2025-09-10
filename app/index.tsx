@@ -12,27 +12,24 @@ export default function IndexScreen() {
   const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
-    // Verifica se o estado de navegação foi inicializado e o carregamento terminou
-    if (rootNavigationState?.key != null && !isLoading) {
-      if (userProfile && userProfile.onboardingCompleted) {
-        // Redireciona para a tela inicial se o usuário já fez o onboarding
-        router.replace('/(tabs)/home');
-      } else {
-        // Redireciona para a tela de boas-vindas para novo usuário
-        router.replace('/welcome');
-      }
+    // Apenas redireciona quando a navegação estiver pronta e o app não estiver carregando
+    if (rootNavigationState?.key == null || isLoading) {
+      return;
     }
-  }, [isLoading, userProfile, router, rootNavigationState]);
 
-  // Se o aplicativo ainda está carregando ou a navegação não foi inicializada, mostra o indicador de atividade
-  if (isLoading || rootNavigationState?.key == null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Carregando o aplicativo" />
-      </View>
-    );
-  }
+    if (userProfile && userProfile.onboardingCompleted) {
+      // Usuário antigo, vai para a home
+      router.replace('/(tabs)/home');
+    } else {
+      // Novo usuário (ou onboarding incompleto), vai para o início do fluxo de onboarding
+      router.replace('/(onboarding)');
+    }
+  }, [isLoading, userProfile, rootNavigationState?.key, router]);
 
-  // Não renderiza nada se as condições acima não forem atendidas, esperando a navegação
-  return null;
+  // Exibe o loading enquanto o app inicializa e a navegação é montada
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Carregando o aplicativo" />
+    </View>
+  );
 }

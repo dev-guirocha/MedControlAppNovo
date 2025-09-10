@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDoseSchedule } from '@/hooks/medication-store';
-import { ScheduledDose } from '@/types/medication';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { MedicationCard } from '@/components/MedicationCard';
@@ -10,6 +9,7 @@ import { Plus } from 'lucide-react-native';
 import { Text as StyledText } from '@/components/StyledText';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAppLoadingStore } from '@/hooks/useAppLoadingStore';
+import { ScheduledDose } from '@/types/medication';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -20,8 +20,9 @@ export default function HomeScreen() {
   const { isLoading } = useAppLoadingStore();
 
   const schedule = useDoseSchedule();
-  const todaysDoses = schedule.filter(dose => dose.isToday);
-  const nextDose = schedule[0] || null;
+  const missedDoses = schedule.filter(dose => dose.isMissed);
+  const upcomingDoses = schedule.filter(dose => !dose.isMissed);
+  const nextDose = upcomingDoses[0] || null;
 
   const getGreeting = useCallback(() => {
     const hour = new Date().getHours();
@@ -64,22 +65,39 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            <StyledText style={[homeStyles.sectionTitle, { marginTop: spacing.lg }]}>DOSES DE HOJE</StyledText>
-            {todaysDoses.length > 0 ? (
-              todaysDoses.map((dose) => (
-                <MedicationCard
-                  key={dose.doseId}
-                  medication={dose}
-                  isNextDose={dose.doseId === nextDose?.doseId}
-                  onTakeDose={() => handleTakeDose(dose)}
-                  onPress={() => router.push(`/medication/${dose.id}`)}
-                  accessibilityLabel={`Dose de ${dose.name} às ${dose.scheduledTime}`}
-                />
-              ))
-            ) : (
-              <View style={styles.emptyState}>
+            {missedDoses.length > 0 && (
+              <>
+                <StyledText style={[homeStyles.sectionTitle, homeStyles.missedSectionTitle]}>DOSES ATRASADAS</StyledText>
+                {missedDoses.map((dose) => (
+                  <MedicationCard
+                    key={dose.doseId}
+                    medication={dose}
+                    onTakeDose={() => handleTakeDose(dose)}
+                    onPress={() => router.push(`/medication/${dose.id}`)}
+                  />
+                ))}
+              </>
+            )}
+
+            {upcomingDoses.length > 0 && (
+                 <>
+                    <StyledText style={homeStyles.sectionTitle}>PRÓXIMAS DOSES</StyledText>
+                    {upcomingDoses.map((dose) => (
+                        <MedicationCard
+                            key={dose.doseId}
+                            medication={dose}
+                            isNextDose={dose.doseId === nextDose?.doseId}
+                            onTakeDose={() => handleTakeDose(dose)}
+                            onPress={() => router.push(`/medication/${dose.id}`)}
+                        />
+                    ))}
+                 </>
+            )}
+
+            {schedule.length === 0 && (
+              <View style={styles.emptyStateSection}>
                 <StyledText style={homeStyles.emptyTitle}>Tudo certo por hoje!</StyledText>
-                <StyledText style={homeStyles.emptySubtitle}>Você não tem mais doses agendadas para hoje. Parabéns!</StyledText>
+                <StyledText style={homeStyles.emptySubtitle}>Você não tem mais doses pendentes para hoje. Parabéns!</StyledText>
               </View>
             )}
           </>
@@ -103,7 +121,16 @@ const homeStyles = StyleSheet.create({
   date: { fontSize: 16, color: colors.textSecondary, textTransform: 'capitalize', marginTop: 4 },
   emptyTitle: { fontSize: 24, fontWeight: '600', color: colors.text, marginTop: 24, marginBottom: 12, textAlign: 'center' },
   emptySubtitle: { fontSize: 16, color: colors.textSecondary, textAlign: 'center' },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 12, textTransform:'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: colors.textSecondary, 
+    marginBottom: 12, 
+    marginTop: spacing.lg, // ✅ AUMENTADO: Espaçamento superior para as seções
+    textTransform:'uppercase', 
+    letterSpacing: 0.5 
+  },
+  missedSectionTitle: { color: colors.danger },
 });
 
 const styles = StyleSheet.create({
@@ -112,6 +139,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100, flexGrow: 1, paddingHorizontal: 16 },
   header: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  emptyStateSection: { alignItems: 'center', paddingVertical: spacing.xxl },
   fab: {
     position: 'absolute',
     right: 16,

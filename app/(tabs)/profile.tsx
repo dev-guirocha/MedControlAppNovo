@@ -37,7 +37,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             if (userProfile) {
               await saveUserProfile({ ...userProfile, onboardingCompleted: false });
-              router.replace('/welcome');
+              router.replace('/(onboarding)');
             }
           },
         },

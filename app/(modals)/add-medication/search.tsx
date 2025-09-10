@@ -12,7 +12,7 @@ export default function SearchMedicationScreen() {
   const params = useLocalSearchParams();
   const { medications: userMedications } = useMedicationStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const fontSize = getFontSize('medium'); // Usando um tamanho padrão para esta tela
+  const fontSize = getFontSize('medium');
 
   const allSuggestions = useMemo(() => {
     const userMedsFormatted = userMedications.map(med => ({ name: med.name, dosage: med.dosage }));
@@ -27,10 +27,8 @@ export default function SearchMedicationScreen() {
   }, [searchQuery, allSuggestions]);
 
   const handleSelectMedication = (med: { name: string, dosage: string }) => {
-    // Para garantir que a tela de formulário receba os parâmetros,
-    // é mais robusto usar router.replace em vez de router.back()
-    // e passar os parâmetros explicitamente.
-    router.replace({
+    // ✅ CORREÇÃO: Usando router.navigate para voltar com parâmetros
+    router.navigate({
       pathname: '/(modals)/add-medication/form',
       params: { 
         ...params,
@@ -40,21 +38,20 @@ export default function SearchMedicationScreen() {
     });
   };
 
-  // ✅ Nova função para usar o texto digitado
   const handleUseTypedName = () => {
     if (searchQuery.trim()) {
-      router.replace({
+      // ✅ CORREÇÃO: Usando router.navigate para voltar com parâmetros
+      router.navigate({
         pathname: '/(modals)/add-medication/form',
         params: {
           ...params,
           selectedName: searchQuery.trim(),
-          selectedDosage: '', // A dosagem será preenchida no formulário
+          selectedDosage: '',
         },
       });
     }
   };
   
-  // ✅ Componente para renderizar quando não há resultados na busca
   const renderEmptyOrAddNew = () => {
     if (searchQuery.trim().length > 0) {
       return (

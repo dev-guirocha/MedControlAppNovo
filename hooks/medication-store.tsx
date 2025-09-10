@@ -9,44 +9,69 @@ export function useDoseSchedule(): ScheduledDose[] {
 
     return useMemo(() => {
         const now = new Date();
-        const allUpcomingDoses: ScheduledDose[] = [];
-
-        // ✅ Criamos um conjunto com os IDs das doses já registradas para uma verificação rápida.
+        const allTodaysDoses: ScheduledDose[] = [];
         const loggedDoseIds = new Set(doseHistory.map(h => h.id));
 
         for (const med of medications) {
-            if (!med.times || med.times.length === 0) continue;
+            if (med.frequency === 'quando necessário' || !med.times || med.times.length === 0) {
+                continue;
+            }
 
-            // Lógica para gerar doses para as próximas semanas.
-            // O ideal é expandir isso para tratar corretamente as diferentes frequências (semanal, etc.).
-            for (let dayOffset = 0; dayOffset < 21; dayOffset++) {
-                const targetDate = new Date(now);
-                targetDate.setDate(now.getDate() + dayOffset);
-                
-                for (const time of med.times) {
-                    const [hour, minute] = time.split(':').map(Number);
-                    const doseTime = new Date(targetDate);
-                    doseTime.setHours(hour, minute, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-                    const doseId = `${med.id}-${doseTime.toISOString()}`;
+            let potentialTimes: string[] = [];
 
-                    // ✅ AQUI ESTÁ A MUDANÇA:
-                    // Verificamos se a dose está no futuro E se ela AINDA NÃO foi registrada.
-                    if (doseTime > now && !loggedDoseIds.has(doseId)) {
-                        allUpcomingDoses.push({
-                            ...med,
-                            doseId: doseId,
-                            scheduledTime: time,
-                            scheduledDateTime: doseTime,
-                            isToday: now.toDateString() === doseTime.toDateString(),
-                        });
+            // ✅ LÓGICA CENTRALIZADA COM SWITCH PARA CADA FREQUÊNCIA
+            switch (med.frequency) {
+                case 'diária':
+                case 'semanal': // A lógica para 'semanal' é a mesma para um único dia.
+                               // Poderia ser aprimorada para checar o dia da semana.
+                    potentialTimes = med.times;
+                    break;
+
+                case 'a cada 12h':
+                case 'a cada 8h':
+                    const interval = med.frequency === 'a cada 12h' ? 12 : 8;
+                    const firstTime = med.times[0];
+                    const [startHour, startMinute] = firstTime.split(':').map(Number);
+                    
+                    let currentHour = startHour;
+                    while (currentHour < 24) {
+                        const hourString = currentHour.toString().padStart(2, '0');
+                        const minuteString = startMinute.toString().padStart(2, '0');
+                        potentialTimes.push(`${hourString}:${minuteString}`);
+                        currentHour += interval;
                     }
+                    break;
+            }
+
+            // Gera as doses com base nos horários calculados
+            for (const time of potentialTimes) {
+                const [hour, minute] = time.split(':').map(Number);
+                const doseTime = new Date(today);
+                doseTime.setHours(hour, minute);
+
+                const doseId = `${med.id}-${doseTime.toISOString()}`;
+
+                if (!loggedDoseIds.has(doseId)) {
+                    allTodaysDoses.push({
+                        ...med,
+                        doseId,
+                        scheduledTime: time,
+                        scheduledDateTime: doseTime,
+                        isToday: true,
+                        isMissed: doseTime < now,
+                    });
                 }
             }
         }
         
-        // Ordena as doses da mais próxima para a mais distante
-        return allUpcomingDoses.sort((a, b) => a.scheduledDateTime.getTime() - b.scheduledDateTime.getTime());
+        return allTodaysDoses.sort((a, b) => {
+            if (a.isMissed && !b.isMissed) return -1;
+            if (!a.isMissed && b.isMissed) return 1;
+            return a.scheduledDateTime.getTime() - b.scheduledDateTime.getTime();
+        });
 
     }, [medications, doseHistory]);
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Modal, Pressable, Platform, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, getFontSize, spacing, medicationColors } from '@/constants/theme';
@@ -12,7 +12,6 @@ import { Text } from '@/components/StyledText';
 const FORMS = ['comprimido', 'cápsula', 'líquido', 'injeção', 'pomada', 'gotas'];
 const FREQUENCIES = ['diária', 'a cada 8h', 'a cada 12h', 'semanal', 'quando necessário'];
 
-// Componente para o Modal de Seleção (Forma, Frequência)
 const PickerModal = ({ visible, title, options, onSelect, onClose, fontScale }) => (
     <Modal visible={visible} transparent onRequestClose={onClose} animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
@@ -46,8 +45,8 @@ export default function MedicationFormScreen() {
 
     const [formData, setFormData] = useState({
         id: params.id as string | undefined,
-        name: (params.name as string) ?? '',
-        dosage: (params.dosage as string) ?? '',
+        name: (params.selectedName as string) ?? (params.name as string) ?? '',
+        dosage: (params.selectedDosage as string) ?? (params.dosage as string) ?? '',
         color: (params.color as string) ?? medicationColors[0],
         form: (params.form as any) ?? 'comprimido',
         frequency: (params.frequency as any) ?? 'diária',
@@ -56,16 +55,16 @@ export default function MedicationFormScreen() {
         stockAlertThreshold: (params.stockAlertThreshold as string) ?? '',
         instructions: (params.instructions as string) ?? '',
         doctor: (params.doctor as string) ?? '',
+        condition: (params.condition as string) ?? '',
     });
 
     useEffect(() => {
         if (params.selectedName) {
-            setFormData(prev => ({ 
-                ...prev, 
+            setFormData(prev => ({
+                ...prev,
                 name: params.selectedName as string,
                 dosage: (params.selectedDosage as string) || '',
             }));
-            router.setParams({ selectedName: '', selectedDosage: '' });
         }
     }, [params.selectedName, params.selectedDosage]);
 
@@ -75,22 +74,19 @@ export default function MedicationFormScreen() {
     const [tempTime, setTempTime] = useState(new Date());
     const [pickerModal, setPickerModal] = useState({ visible: false, title: '', options: [], onSelect: (value: string) => {} });
 
-    const openPicker = (title: string, options: string[], onSelect: (value: string) => void) => {
-        setPickerModal({ visible: true, title, options, onSelect });
-    };
+    const showMultipleTimes = formData.frequency === 'diária' || formData.frequency === 'semanal';
 
-    const handleSelectForm = (value: string) => {
-        setFormData(prev => ({ ...prev, form: value as any }));
-        setPickerModal({ ...pickerModal, visible: false });
-    };
-
+    const openPicker = (title: string, options: string[], onSelect: (value: string) => void) => setPickerModal({ visible: true, title, options, onSelect });
+    const handleSelectForm = (value: string) => { setFormData(prev => ({ ...prev, form: value as any })); setPickerModal({ ...pickerModal, visible: false }); };
     const handleSelectFrequency = (value: string) => {
-        setFormData(prev => ({ ...prev, frequency: value as any }));
+        if ((value === 'a cada 8h' || value === 'a cada 12h') && formData.times.length > 1) {
+            setFormData(prev => ({ ...prev, frequency: value as any, times: [prev.times[0]] }));
+        } else {
+            setFormData(prev => ({ ...prev, frequency: value as any }));
+        }
         setPickerModal({ ...pickerModal, visible: false });
     };
-
     const handleSelectColor = (color: string) => setFormData(prev => ({ ...prev, color }));
-    
     const onTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
         const currentDate = selectedDate || tempTime;
         if (Platform.OS === 'android') setShowTimePicker(false);
@@ -100,13 +96,11 @@ export default function MedicationFormScreen() {
             handleTimeChange(timePickerIndex, time);
         }
     };
-    
     const handleConfirmTime = () => {
         const time = `${tempTime.getHours().toString().padStart(2, '0')}:${tempTime.getMinutes().toString().padStart(2, '0')}`;
         handleTimeChange(timePickerIndex, time);
         setShowTimePicker(false);
     };
-
     const showPickerFor = (index: number) => {
         const [h, m] = formData.times[index].split(':').map(Number);
         const newTempTime = new Date();
@@ -115,16 +109,11 @@ export default function MedicationFormScreen() {
         setTimePickerIndex(index);
         setShowTimePicker(true);
     };
-
-    const handleTimeChange = (index: number, value: string) => {
-        const newTimes = [...formData.times]; newTimes[index] = value;
-        setFormData(prev => ({ ...prev, times: newTimes.sort() }));
-    };
-
+    const handleTimeChange = (index: number, value: string) => { const newTimes = [...formData.times]; newTimes[index] = value; setFormData(prev => ({ ...prev, times: newTimes.sort() })); };
     const handleRemoveTime = (index: number) => { if (formData.times.length > 1) setFormData(prev => ({ ...prev, times: prev.times.filter((_, i) => i !== index) })); };
     const handleAddTime = () => setFormData(prev => ({ ...prev, times: [...prev.times, '12:00'] }));
     const setTimePreset = (times: string[]) => setFormData(prev => ({ ...prev, times }));
-    const handleNext = () => router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...formData } });
+    const handleNext = () => router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...formData, times: formData.times } as any });
     const isValid = !!(formData.name.trim() && formData.dosage.trim() && formData.stock.trim() && formData.stockAlertThreshold.trim());
 
     return (
@@ -133,24 +122,53 @@ export default function MedicationFormScreen() {
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Nome do Medicamento *</Text>
-                        <TouchableOpacity style={styles.picker} onPress={() => router.push('/(modals)/add-medication/search')}>
-                            <Text style={[{fontSize: fontSize.lg}, !formData.name && styles.placeholderText]}>
-                                {formData.name || 'Clique para buscar'}
-                            </Text>
+                        <TouchableOpacity style={styles.picker} onPress={() => router.push({pathname: '/(modals)/add-medication/search', params: formData })}>
+                            <Text style={[{fontSize: fontSize.lg}, !formData.name && styles.placeholderText]}>{formData.name || 'Clique para buscar'}</Text>
                             <ChevronDown size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Dosagem *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.dosage} onChangeText={(text) => setFormData(prev => ({ ...prev, dosage: text }))} placeholder="Ex: 500mg ou 1 comprimido"/></View>
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, {fontSize: fontSize.md}]}>Para que é este medicamento? (Opcional)</Text>
+                        <TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.condition} onChangeText={(text) => setFormData(prev => ({ ...prev, condition: text }))} placeholder="Ex: Dor de cabeça, Hipertensão"/>
+                    </View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Cor de Identificação</Text><View style={styles.colorSelectorContainer}>{medicationColors.map(color => (<TouchableOpacity key={color} style={[styles.colorOption, { backgroundColor: color }]} onPress={() => handleSelectColor(color)}>{formData.color === color && <Check size={24} color="white" />}</TouchableOpacity>))}</View></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Médico(a) (Opcional)</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.doctor} onChangeText={(text) => setFormData(prev => ({ ...prev, doctor: text }))} placeholder="Ex: Dr. Carlos Andrade"/></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Forma *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Forma', FORMS, handleSelectForm)}><Text style={{fontSize: fontSize.lg}}>{formData.form}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Frequência *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Frequência', FREQUENCIES, handleSelectFrequency)}><Text style={{fontSize: fontSize.lg}}>{formData.frequency}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Horários *</Text><View style={styles.presetContainer}><TimePreset label="Manhã" icon={<Sun size={18} color={colors.primary} />} onPress={() => setTimePreset(['08:00'])} /><TimePreset label="Tarde" icon={<CloudSun size={18} color={colors.primary} />} onPress={() => setTimePreset(['14:00'])} /><TimePreset label="Noite" icon={<Moon size={18} color={colors.primary} />} onPress={() => setTimePreset(['20:00'])} /></View>{formData.times.map((time, index) => <View key={index} style={styles.timeRow}><TouchableOpacity style={[styles.input, styles.timeInput]} onPress={() => showPickerFor(index)}><Text style={{fontSize: fontSize.lg}}>{time}</Text></TouchableOpacity>{formData.times.length > 1 && <TouchableOpacity style={styles.removeButton} onPress={() => handleRemoveTime(index)}><X size={20} color={colors.danger} /></TouchableOpacity>}</View>)}<TouchableOpacity style={styles.addTimeButton} onPress={handleAddTime}><Text style={styles.addTimeText}>+ Adicionar horário</Text></TouchableOpacity></View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Estoque Inicial *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stock)} onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 30" keyboardType="numeric"/></View>
+                    
                     <View style={styles.inputGroup}>
-                        <Text style={[styles.label, {fontSize: fontSize.md}]}>Limite para Alerta de Estoque *</Text>
-                        <TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stockAlertThreshold)} onChangeText={(text) => setFormData(prev => ({ ...prev, stockAlertThreshold: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 5" keyboardType="numeric"/>
+                        <Text style={[styles.label, {fontSize: fontSize.md}]}>
+                            {showMultipleTimes ? 'Horários *' : 'Horário da Primeira Dose *'}
+                        </Text>
+                        {showMultipleTimes && (
+                            <View style={styles.presetContainer}>
+                                <TimePreset label="Manhã" icon={<Sun size={18} color={colors.primary} />} onPress={() => setTimePreset(['08:00'])} />
+                                <TimePreset label="Tarde" icon={<CloudSun size={18} color={colors.primary} />} onPress={() => setTimePreset(['14:00'])} />
+                                <TimePreset label="Noite" icon={<Moon size={18} color={colors.primary} />} onPress={() => setTimePreset(['20:00'])} />
+                            </View>
+                        )}
+                        {formData.times.map((time, index) => (
+                            <View key={index} style={styles.timeRow}>
+                                <TouchableOpacity style={[styles.input, styles.timeInput]} onPress={() => showPickerFor(index)}>
+                                    <Text style={{fontSize: fontSize.lg}}>{time}</Text>
+                                </TouchableOpacity>
+                                {showMultipleTimes && formData.times.length > 1 && (
+                                    <TouchableOpacity style={styles.removeButton} onPress={() => handleRemoveTime(index)}>
+                                        <X size={20} color={colors.danger} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ))}
+                        {showMultipleTimes && (
+                            <TouchableOpacity style={styles.addTimeButton} onPress={handleAddTime}>
+                                <Text style={styles.addTimeText}>+ Adicionar horário</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
+
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Estoque Inicial *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stock)} onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 30" keyboardType="numeric"/></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Limite para Alerta de Estoque *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stockAlertThreshold)} onChangeText={(text) => setFormData(prev => ({ ...prev, stockAlertThreshold: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 5" keyboardType="numeric"/></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Instruções Especiais (Opcional)</Text><TextInput style={[styles.input, styles.textArea, {fontSize: fontSize.lg}]} value={formData.instructions} onChangeText={(text) => setFormData(prev => ({ ...prev, instructions: text }))} placeholder="Ex: Tomar com alimentos" multiline/></View>
                 </View>
             </KeyboardAwareScrollView>
@@ -166,7 +184,7 @@ export default function MedicationFormScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    form: { padding: spacing.lg, paddingBottom: 0 }, // Remove paddingBottom to avoid extra space in ScrollView
+    form: { padding: spacing.lg, paddingBottom: 0 },
     footer: { padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border },
     inputGroup: { marginBottom: spacing.lg },
     label: { fontWeight: '500', color: colors.text, marginBottom: spacing.sm },
