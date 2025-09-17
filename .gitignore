@@ -1,37 +1,91 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# --- Node / Package managers ---
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
 
-# Expo
+# --- Expo / Metro / Bundler cache ---
 .expo/
+.expo-shared/
 dist/
 web-build/
-expo-env.d.ts
+.expo-env.d.ts
+.metro-cache/
+.metro-health-check*
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
+# --- TypeScript ---
+*.tsbuildinfo
+
+# --- Env / Secrets ---
+.env
+.env*.local
+*.pem
 *.p8
 *.p12
 *.key
 *.mobileprovision
+google-services.json
+GoogleService-Info.plist
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
+# --- OS junk ---
 .DS_Store
-*.pem
+Thumbs.db
 
-# local env files
-.env*.local
+# ===================== iOS / Xcode =====================
 
-# typescript
-*.tsbuildinfo
+# Workspaces & user data
+**/*.xcworkspace/xcuserdata/
+**/*.xcuserstate
+**/*.xcscmblueprint
+**/*.xcuserdatad/
+
+# DerivedData & build outputs
+DerivedData/
+ios/build/
+build/
+
+# CocoaPods
+ios/Pods/
+ios/Podfile.lock
+
+# SwiftPM
+ios/.build/
+ios/Package.resolved
+ios/Packages/
+
+# Xcode logs
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# ===================== Android / Gradle =====================
+
+# Gradle caches & builds
+.android/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+
+# Keystores (nunca versione!)
+*.jks
+*.keystore
+
+# NDK / CMake cache
+android/.cxx/
+**/cmake-build-*/
+
+# --- React Native / Assets ---
+*.orig.*
+*.patch
+*.iml
+
+# --- Ruby / Bundler (para CocoaPods via bundler) ---
+/vendor/bundle/
+.bundle/
