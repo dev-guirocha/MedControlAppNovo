@@ -1,0 +1,53 @@
+name: EAS Build & Submit (Production)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Diagnostics
+        run: |
+          npx expo-doctor || true
+          npx eas-cli diagnostics || true
+
+      - name: Build Android (AAB)
+        run: npx eas-cli build -p android --profile production --non-interactive
+
+      - name: Submit Android to Play Console
+        run: npx eas-cli submit -p android --profile production --latest --non-interactive
+
+      # Uncomment the steps below once your iOS credentials are configured on EAS
+      #- name: Build iOS (Release)
+      #  run: npx eas-cli build -p ios --profile production --non-interactive
+      #- name: Submit iOS to App Store Connect
+      #  run: npx eas-cli submit -p ios --profile production --latest --non-interactive
+
+      - name: Done
+        run: echo "Build & submit completed"
+
+# Setup required secrets in the repository settings:
+# - EXPO_TOKEN: Expo access token with EAS Build/Submit permissions
+# Ensure Play Console credentials are configured in EAS (eas credentials)

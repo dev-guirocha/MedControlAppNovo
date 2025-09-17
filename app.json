@@ -13,6 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "deploymentTarget": "14.0",
       "supportsTablet": true,
       "bundleIdentifier": "dev.guirocha.MedControlApp"
     },
