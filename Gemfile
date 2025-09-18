@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
-gem 'cocoapods', '~> 1.16.2'
+gem 'cocoapods', git: 'https://github.com/CocoaPods/CocoaPods.git', branch: 'master'
 gem 'xcodeproj', git: 'https://github.com/CocoaPods/Xcodeproj.git', branch: 'master'
 gem 'logger', '1.6.4'

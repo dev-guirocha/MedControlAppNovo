@@ -1,0 +1,8 @@
+{
+    "react-native": {
+      "messaging_ios_auto_register_for_remote_messages": true,
+      "native_messaging_permission_enabled": true,
+      "storage_enabled": true,
+      "app_enabled": true
+    }
+  }

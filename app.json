@@ -15,7 +15,10 @@
     "ios": {
       "deploymentTarget": "14.0",
       "supportsTablet": true,
-      "bundleIdentifier": "dev.guirocha.MedControlApp"
+      "bundleIdentifier": "com.dev-guirocha.MedControlApp-br",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Nosso aplicativo precisa de acesso à sua galeria para que você possa selecionar uma foto de perfil."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +31,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "react-native-vision-camera"
     ],
     "experiments": {
       "typedRoutes": true
