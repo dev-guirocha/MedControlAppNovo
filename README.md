@@ -1,9 +1,9 @@
-#MedControlApp
-Seu assistente pessoal para o controle de medicamentos e saúde.
+MedControlApp - Seu assistente pessoal para o controle de medicamentos e saúde.
 
 MedControlApp é um aplicativo móvel, construído com React Native e Expo, projetado para ajudar usuários a gerenciar seus medicamentos, agendar consultas e manter um histórico de saúde completo. O objetivo é simplificar a rotina de cuidados, garantindo que nenhum tratamento seja esquecido.
 
 ✨ Funcionalidades Principais
+
 Gerenciamento de Medicamentos: Adicione, edite e remova medicamentos com informações detalhadas sobre dosagem, frequência e horários.
 
 Lembretes Inteligentes: Receba notificações personalizadas para nunca mais esquecer uma dose.
@@ -19,6 +19,7 @@ Perfis de Usuário: Gerencie perfis, incluindo a opção de cuidar de outras pes
 Suporte a Múltiplos Idiomas: Interface disponível em Português, Inglês e Espanhol.
 
 🛠️ Tecnologias Utilizadas
+
 Este projeto foi construído utilizando um conjunto de tecnologias modernas para o desenvolvimento móvel multiplataforma.
 
 Framework Principal: React Native com Expo (SDK 51)
@@ -40,6 +41,7 @@ Lucide Icons para iconografia.
 Armazenamento Local: Async Storage
 
 🚀 Começando
+
 Siga estas instruções para obter uma cópia do projeto em funcionamento na sua máquina local para desenvolvimento e testes.
 
 Pré-requisitos
@@ -81,7 +83,9 @@ npm start
 # Ou rodar diretamente no iOS ou Android
 npm run ios
 npm run android
+
 📜 Scripts Disponíveis
+
 No diretório do projeto, você pode executar:
 
 npm start: Inicia o servidor de desenvolvimento do Metro.
@@ -93,6 +97,7 @@ npm run ios: Inicia o aplicativo no simulador iOS ou em um dispositivo conectado
 npm run web: Inicia o aplicativo em um navegador web.
 
 📁 Estrutura do Projeto
+
 A estrutura de pastas do projeto segue uma organização modular para facilitar a manutenção e escalabilidade.
 
 /
@@ -108,5 +113,7 @@ A estrutura de pastas do projeto segue uma organização modular para facilitar 
 ├── hooks/            # Hooks customizados e stores (Zustand)
 ├── lib/              # Funções utilitárias e lógica de serviços
 └── ...
+
 📄 Licença
+
 Este projeto é de propriedade privada. Todos os direitos reservados.
