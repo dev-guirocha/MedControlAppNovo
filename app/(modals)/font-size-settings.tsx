@@ -5,6 +5,7 @@ import { View, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAuthStore } from '@/hooks/useAuthStore';
+import type { FontScale } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import { Check } from 'lucide-react-native';
 
@@ -18,16 +19,18 @@ export default function FontSizeSettingsModal() {
     router.back(); // Volta para a tela de perfil após a seleção
   };
 
+  const fontOptions: FontScale[] = ['small', 'medium', 'large'];
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: 'Tamanho do Texto' }} />
 
       <View style={styles.content}>
-        {['small', 'medium', 'large'].map((scale) => (
+        {fontOptions.map((scale) => (
           <TouchableOpacity
             key={scale}
             style={styles.optionItem}
-            onPress={() => handleSelectFontScale(scale as any)}
+            onPress={() => handleSelectFontScale(scale)}
           >
             <View>
               <Text style={[styles.optionText, {fontSize: getFontSize(scale).md}]}>

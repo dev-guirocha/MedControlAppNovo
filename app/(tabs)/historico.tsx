@@ -5,6 +5,7 @@ import { colors, getFontSize, spacing } from '@/constants/theme';
 import { DoseHistory } from '@/types/medication';
 import { CheckCircle2, XCircle, CalendarClock } from 'lucide-react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import type { Theme } from 'react-native-calendars/src/types';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 
@@ -17,26 +18,34 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-const HistoryItem = ({ item, fontSize }: { item: DoseHistory, fontSize: any }) => (
-  <View style={styles.itemContainer}>
-    <View style={styles.iconContainer}>
-      {item.status === 'taken' 
-        ? <CheckCircle2 size={24} color={colors.success} /> 
-        : <XCircle size={24} color={colors.danger} />}
-    </View>
-    <View style={styles.itemDetails}>
-      <Text style={[styles.itemName, { fontSize: fontSize.md }]}>{item.medicationName}</Text>
-      <Text style={[styles.itemTime, { fontSize: fontSize.sm }]}>
-        Agendado para: {new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-      {item.takenTime && (
-         <Text style={[styles.itemTime, { fontSize: fontSize.sm }]}>
-          Registrado às: {new Date(item.takenTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+const HistoryItem = ({ item, fontSize }: { item: DoseHistory, fontSize: any }) => {
+  const isTaken = item.status === 'taken';
+  const isSkipped = item.status === 'skipped';
+  const statusLabel = isTaken ? 'Tomada' : isSkipped ? 'Pulada' : 'Pendente';
+  const statusStyle = isTaken ? styles.badgeSuccess : isSkipped ? styles.badgeDanger : styles.badgeNeutral;
+
+  return (
+    <View style={styles.itemContainer}>
+      <View style={styles.iconContainer}>
+        {isTaken ? <CheckCircle2 size={24} color={colors.success} /> : <XCircle size={24} color={colors.danger} />}
+      </View>
+      <View style={styles.itemDetails}>
+        <View style={styles.itemHeader}>
+          <Text style={[styles.itemName, { fontSize: fontSize.md }]}>{item.medicationName}</Text>
+          <View style={[styles.statusBadge, statusStyle]}>
+            <Text style={styles.statusBadgeText}>{statusLabel}</Text>
+          </View>
+        </View>
+        <Text style={[styles.itemTime, { fontSize: fontSize.sm }]}>
+          Agendado para: {new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </Text>
-      )}
+        {item.takenTime && (
+          <Text style={[styles.itemTime, { fontSize: fontSize.sm }]}>Registrado às: {new Date(item.takenTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+        )}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default function HistoryScreen() {
   const { doseHistory } = useDoseHistoryStore();
@@ -84,7 +93,7 @@ export default function HistoryScreen() {
       }).sort((a,b) => new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime());
   }, [doseHistory, selectedDate]);
   
-  const calendarTheme = {
+  const calendarTheme: Theme = {
       backgroundColor: colors.background,
       calendarBackground: colors.background,
       textSectionTitleColor: colors.textSecondary,
@@ -151,6 +160,7 @@ const styles = StyleSheet.create({
   itemDetails: {
     flex: 1,
   },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
   itemName: {
     fontWeight: '600',
     color: colors.text,
@@ -159,4 +169,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
+  statusBadge: { borderRadius: 12, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  statusBadgeText: { fontSize: 12, fontWeight: '600', color: colors.background },
+  badgeSuccess: { backgroundColor: colors.success },
+  badgeDanger: { backgroundColor: colors.danger },
+  badgeNeutral: { backgroundColor: colors.textSecondary },
 });

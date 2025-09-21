@@ -86,8 +86,15 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     const med = medications[medIndex];
 
     // 1. Criar e salvar a entrada no histórico primeiro
+    const dayKey = `${scheduledTime.getFullYear()}-${String(scheduledTime.getMonth() + 1).padStart(2, '0')}-${String(
+      scheduledTime.getDate()
+    ).padStart(2, '0')}`;
+    const timeKey = `${String(scheduledTime.getHours()).padStart(2, '0')}:${String(scheduledTime.getMinutes()).padStart(2, '0')}`;
+    const doseId = `${medicationId}::${dayKey}::${timeKey}`;
+
     const newEntry: DoseHistory = {
       id: `${medicationId}-${scheduledTime.toISOString()}`,
+      doseId,
       medicationId: medicationId,
       medicationName: med.name,
       scheduledTime: scheduledTime.toISOString(),

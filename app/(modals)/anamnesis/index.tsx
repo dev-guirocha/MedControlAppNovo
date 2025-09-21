@@ -49,7 +49,9 @@ export default function AnamnesisScreen() {
   const handleArrayChange = (key: keyof typeof formData, index: number, value: string) => {
     const newArray = [...(formData[key] as string[])];
     newArray[index] = value;
-    setFormData(prev => ({ ...prev, [key]: newArray }));
+    const shouldAppendEmpty = value.trim().length > 0 && index === newArray.length - 1;
+    const normalizedArray = shouldAppendEmpty ? [...newArray, ''] : newArray;
+    setFormData(prev => ({ ...prev, [key]: normalizedArray }));
   };
 
   const handleAddToArray = (key: keyof typeof formData) => {
@@ -89,6 +91,7 @@ export default function AnamnesisScreen() {
           <Text style={styles.subtitle}>Preencha seus dados médicos para mantê-los salvos e acessíveis.</Text>
 
           <Text style={dynamicStyles.sectionTitle}>Condições de Saúde</Text>
+          <Text style={styles.helperText}>Registre um item por linha; adicionamos novos campos automaticamente conforme você digita.</Text>
           <View style={styles.inputGroup}>
             <Text style={dynamicStyles.label}>Condições Crônicas (Separe por linha)</Text>
             {formData.chronicConditions.map((condition, index) => (
@@ -97,7 +100,7 @@ export default function AnamnesisScreen() {
                 style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={condition}
                 onChangeText={(text) => handleArrayChange('chronicConditions', index, text)}
-                placeholder="Ex: Hipertensão, Diabetes"
+                placeholder={index === 0 ? 'Ex: Hipertensão (diagnóstico em 2015)' : 'Adicionar outra condição'}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('chronicConditions')} style={styles.addButton}>
@@ -114,7 +117,7 @@ export default function AnamnesisScreen() {
                 style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={allergy}
                 onChangeText={(text) => handleArrayChange('allergies', index, text)}
-                placeholder="Ex: Dipirona, Pólen"
+                placeholder={index === 0 ? 'Ex: Dipirona (reação em 2010)' : 'Adicionar outra alergia'}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('allergies')} style={styles.addButton}>
@@ -132,7 +135,7 @@ export default function AnamnesisScreen() {
                 style={[styles.input, dynamicStyles.input, {marginBottom: spacing.sm}]}
                 value={surgery}
                 onChangeText={(text) => handleArrayChange('surgeries', index, text)}
-                placeholder="Ex: Apendicectomia (2020)"
+                placeholder={index === 0 ? 'Ex: Apendicectomia (2020)' : 'Adicionar outra cirurgia'}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('surgeries')} style={styles.addButton}>
@@ -200,6 +203,7 @@ const styles = StyleSheet.create({
   footerWithExport: { justifyContent: 'space-between' },
   saveButton: { flex: 1 },
   subtitle: { color: colors.textSecondary, marginBottom: spacing.lg, fontSize: 16, lineHeight: 24 },
+  helperText: { color: colors.textSecondary, marginBottom: spacing.sm, fontSize: 13 },
   inputGroup: { marginBottom: spacing.lg },
   label: { fontWeight: '500', color: colors.text, marginBottom: spacing.sm },
   input: { borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, color: colors.text, backgroundColor: colors.cardBackground, minHeight: 56 },

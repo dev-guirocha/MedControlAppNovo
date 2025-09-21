@@ -1,17 +1,22 @@
 // MedControlAppNovo/app/(tabs)/profile.tsx
 
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
-import { User, FileText, ChevronRight, Edit, ShieldCheck, FileType, TextQuote } from 'lucide-react-native';
+import { FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote } from 'lucide-react-native';
 import { Text } from '@/components/StyledText';
 
 // --- Componentes Reutilizáveis para a Lista ---
+type SettingsItemProps = {
+    icon?: React.ComponentType<{ size?: number | string; color?: ColorValue; style?: any }>;
+    text: string;
+    onPress: () => void;
+};
 
-const SettingsItem = ({ icon: Icon, text, onPress }) => (
+const SettingsItem: React.FC<SettingsItemProps> = ({ icon: Icon, text, onPress }) => (
     <TouchableOpacity style={styles.itemContainer} onPress={onPress}>
         <View style={styles.itemContent}>
             {Icon && <Icon size={22} color={colors.textSecondary} style={styles.itemIcon} />}
@@ -30,6 +35,7 @@ export default function ProfileScreen() {
   const { userProfile, saveUserProfile } = useAuthStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
+  const userInitial = userProfile?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
 
   const handleLogout = () => {
     Alert.alert('Sair da Conta', 'Tem certeza que deseja sair?',
@@ -62,13 +68,13 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho do Perfil */}
       <View style={styles.profileHeader}>
-        <View style={styles.avatar}><User size={48} color={colors.primary} /></View>
+        <View style={styles.avatar}><Text style={styles.avatarInitial}>{userInitial}</Text></View>
         <View style={styles.profileInfo}>
           <Text style={dynamicStyles.userName}>{userProfile.name}</Text>
           <Text style={dynamicStyles.userType}>{userProfile.type === 'patient' ? 'Paciente' : 'Cuidador(a)'}</Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/(modals)/edit-profile')} style={styles.editButton}>
-          <Edit size={20} color={colors.primary} />
+          <Pencil size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
       
@@ -122,6 +128,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   avatar: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.primaryFaded, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  avatarInitial: { fontSize: 28, fontWeight: '700', color: colors.primary },
   profileInfo: { flex: 1 },
   editButton: { padding: spacing.sm },
   content: {

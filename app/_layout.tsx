@@ -46,7 +46,7 @@ export default function RootLayout() {
   const { loadHistory } = useDoseHistoryStore();
   const { loadAppointments } = useAppointmentStore();
   const { loadAnamnesis } = useAnamnesisStore();
-  const { isAppLoading, stopLoading } = useAppLoadingStore();
+  const { isLoading, stopLoading } = useAppLoadingStore();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -69,10 +69,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!isAppLoading) {
+    if (!isLoading) {
       SplashScreen.hideAsync();
     }
-  }, [isAppLoading]);
+  }, [isLoading]);
 
   return (
     <RootSiblingParent>

@@ -1,6 +1,6 @@
 {
   "name": "React-FabricImage",
-  "version": "0.74.2",
+  "version": "0.74.5",
   "summary": "Image Component for Fabric for React Native.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.74.2"
+    "tag": "v0.74.5"
   },
   "source_files": "react/renderer/components/image/**/*.{m,mm,cpp,h}",
   "exclude_files": "react/renderer/components/image/tests",
@@ -28,28 +28,52 @@
       "2024.01.01.00"
     ],
     "React-jsiexecutor": [
-      "0.74.2"
+      "0.74.5"
     ],
     "RCTRequired": [
-      "0.74.2"
+      "0.74.5"
     ],
     "RCTTypeSafety": [
-      "0.74.2"
+      "0.74.5"
     ],
-    "React-jsi": [],
-    "React-logger": [],
-    "glog": [],
-    "DoubleConversion": [],
+    "React-jsi": [
+
+    ],
+    "React-logger": [
+
+    ],
+    "glog": [
+
+    ],
+    "DoubleConversion": [
+
+    ],
     "fmt": [
       "9.1.0"
     ],
-    "React-ImageManager": [],
-    "React-utils": [],
-    "Yoga": [],
-    "ReactCommon": [],
-    "React-graphics": [],
-    "React-Fabric": [],
-    "React-rendererdebug": [],
-    "hermes-engine": []
+    "React-ImageManager": [
+
+    ],
+    "React-utils": [
+
+    ],
+    "Yoga": [
+
+    ],
+    "ReactCommon": [
+
+    ],
+    "React-graphics": [
+
+    ],
+    "React-Fabric": [
+
+    ],
+    "React-rendererdebug": [
+
+    ],
+    "hermes-engine": [
+
+    ]
   }
 }

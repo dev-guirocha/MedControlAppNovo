@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.dev-guirocha.MedControlApp-br",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Nosso aplicativo precisa de acesso à sua galeria para que você possa selecionar uma foto de perfil."
+        "NSPhotoLibraryUsageDescription": "Nosso aplicativo precisa de acesso à sua galeria para que você possa selecionar uma foto de perfil.",
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para poder ter acesso ao fuso horário afim de manter a função de notificação baseada em horário ativa."
       }
     },
     "android": {

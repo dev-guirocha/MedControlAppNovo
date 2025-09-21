@@ -1,6 +1,6 @@
 {
   "name": "React-Core",
-  "version": "0.74.2",
+  "version": "0.74.5",
   "summary": "The core of React Native.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.74.2"
+    "tag": "v0.74.5"
   },
   "resource_bundles": {
     "RCTI18nStrings": [
@@ -35,22 +35,48 @@
     "RCT-Folly": [
       "2024.01.01.00"
     ],
-    "React-cxxreact": [],
-    "React-perflogger": [],
-    "React-jsi": [],
-    "React-jsiexecutor": [],
-    "React-utils": [],
-    "React-featureflags": [],
+    "React-cxxreact": [
+
+    ],
+    "React-perflogger": [
+
+    ],
+    "React-jsi": [
+
+    ],
+    "React-jsiexecutor": [
+
+    ],
+    "React-utils": [
+
+    ],
+    "React-featureflags": [
+
+    ],
     "SocketRocket": [
       "0.7.0"
     ],
-    "React-runtimescheduler": [],
-    "Yoga": [],
-    "glog": [],
-    "React-jsinspector": [],
-    "RCTDeprecation": [],
-    "React-hermes": [],
-    "hermes-engine": []
+    "React-runtimescheduler": [
+
+    ],
+    "Yoga": [
+
+    ],
+    "glog": [
+
+    ],
+    "React-jsinspector": [
+
+    ],
+    "RCTDeprecation": [
+
+    ],
+    "React-hermes": [
+
+    ],
+    "hermes-engine": [
+
+    ]
   },
   "subspecs": [
     {
@@ -75,10 +101,10 @@
       ],
       "dependencies": {
         "React-Core/Default": [
-          "0.74.2"
+          "0.74.5"
         ],
         "React-Core/RCTWebSocket": [
-          "0.74.2"
+          "0.74.5"
         ]
       },
       "private_header_files": "React/Inspector/RCTCxx*.h"
@@ -88,7 +114,7 @@
       "source_files": "Libraries/WebSocket/*.{h,m}",
       "dependencies": {
         "React-Core/Default": [
-          "0.74.2"
+          "0.74.5"
         ]
       }
     },
@@ -96,77 +122,99 @@
       "name": "CoreModulesHeaders",
       "source_files": "React/CoreModules/**/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTActionSheetHeaders",
       "source_files": "Libraries/ActionSheetIOS/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTAnimationHeaders",
       "source_files": "Libraries/NativeAnimation/{Drivers/*,Nodes/*,*}.{h}",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTBlobHeaders",
       "source_files": "Libraries/Blob/{RCTBlobManager,RCTFileReaderModule}.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTImageHeaders",
       "source_files": "Libraries/Image/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTLinkingHeaders",
       "source_files": "Libraries/LinkingIOS/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTNetworkHeaders",
       "source_files": "Libraries/Network/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTPushNotificationHeaders",
       "source_files": "Libraries/PushNotificationIOS/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTSettingsHeaders",
       "source_files": "Libraries/Settings/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTTextHeaders",
       "source_files": "Libraries/Text/**/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     },
     {
       "name": "RCTVibrationHeaders",
       "source_files": "Libraries/Vibration/*.h",
       "dependencies": {
-        "React-Core/Default": []
+        "React-Core/Default": [
+
+        ]
       }
     }
   ]

@@ -5,8 +5,8 @@ import { useAuthStore } from '@/hooks/useAuthStore';
 import { getFontSize } from '@/constants/theme';
 
 export default function TermsEn() {
-  const { fontScaleMultiplier } = useAuthStore();
-  const fs = getFontSize(fontScaleMultiplier);
+  const { fontScale } = useAuthStore();
+  const fs = getFontSize(fontScale);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -67,4 +67,3 @@ const styles = StyleSheet.create({
   paragraph: { color: colors.textSecondary, lineHeight: 22 },
   small: { color: colors.textSecondary },
 });
-

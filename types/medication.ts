@@ -17,6 +17,7 @@ export interface Medication {
 // ... (O resto do arquivo DoseHistory e UserProfile permanece igual)
 export interface DoseHistory {
   id: string;
+  doseId?: string;
   medicationId: string;
   medicationName: string;
   scheduledTime: string;
@@ -69,4 +70,5 @@ export type ScheduledDose = Medication & {
   scheduledTime: string;
   scheduledDateTime: Date;
   isToday: boolean;
+  isMissed: boolean;
 };

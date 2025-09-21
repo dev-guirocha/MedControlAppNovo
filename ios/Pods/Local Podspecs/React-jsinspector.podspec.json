@@ -1,6 +1,6 @@
 {
   "name": "React-jsinspector",
-  "version": "0.74.2",
+  "version": "0.74.5",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.74.2"
+    "tag": "v0.74.5"
   },
   "source_files": "*.{cpp,h}",
   "header_dir": "jsinspector-modern",
@@ -23,16 +23,26 @@
   },
   "module_name": "jsinspector_modern",
   "dependencies": {
-    "glog": [],
+    "glog": [
+
+    ],
     "RCT-Folly": [
       "2024.01.01.00"
     ],
-    "React-featureflags": [],
-    "DoubleConversion": [],
-    "React-runtimeexecutor": [
-      "0.74.2"
+    "React-featureflags": [
+
     ],
-    "React-jsi": [],
-    "hermes-engine": []
+    "DoubleConversion": [
+
+    ],
+    "React-runtimeexecutor": [
+      "0.74.5"
+    ],
+    "React-jsi": [
+
+    ],
+    "hermes-engine": [
+
+    ]
   }
 }

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
-import { colors, getFontSize, spacing } from '@/constants/theme';
+import { colors, getFontSize, spacing, medicationColors } from '@/constants/theme';
 import { Medication } from '@/types/medication';
 import Toast from 'react-native-root-toast';
 import { CheckCircle, Search, Pill, Inbox } from 'lucide-react-native';
@@ -56,20 +56,20 @@ export default function LogAsNeededScreen() {
           {
             text: 'Adicionar',
             onPress: async () => {
-              // ✅ CORREÇÃO: Preenche os dados do novo medicamento
               const newMedicationData = {
                 name: item.name,
                 dosage: item.dosage,
-                form: 'comprimido' as const,
-                frequency: 'quando necessário' as const,
-                times: [],
-                stock: 1, // Começa com 1 para a dose que está sendo tomada
+                form: 'comprimido' as Medication['form'],
+                frequency: 'quando necessário' as Medication['frequency'],
+                times: [] as string[],
+                stock: 1,
                 stockAlertThreshold: 0,
                 instructions: 'Tomar quando necessário.',
+                condition: '',
+                color: medicationColors[0],
+                doctor: '',
               };
               const newMed = await addMedication(newMedicationData);
-              // O `addMedication` agora retorna o novo medicamento. Podemos usá-lo para registrar a dose.
-              // Note que o logDose já subtrai 1 do estoque, então o estoque final será 0.
               await logDose(newMed.id, new Date(), 'taken');
               Toast.show(`${newMed.name} foi adicionado e a dose registrada!`, {
                  duration: Toast.durations.LONG,

@@ -1,45 +1,43 @@
+# ios/Podfile
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
-$iOSVersion = '14.0'
-platform :ios, $iOSVersion
+platform :ios, '13.4'
+inhibit_all_warnings!
+use_frameworks! :linkage => :static
 
 target 'MedControlApp' do
-  use_modular_headers!
+  use_expo_modules!
   config = use_native_modules!
-  use_frameworks! :linkage => :static
 
   use_react_native!(
     :path => config[:reactNativePath],
-    :hermes_enabled => true
+    # :hermes_enabled => false
   )
 
-  post_integrate do |installer|
-    begin
-      expo_patch_react_imports!(installer)
-    rescue => e
-      Pod::UI.warn e
-    end
-  end
-end
+  # Adicione qualquer outra dependência de Pod aqui
 
-post_install do |installer|
-  react_native_post_install(installer)
+  post_install do |installer|
+    react_native_post_install(installer)
 
-  # ===== A CORREÇÃO MÁGICA COMEÇA AQUI =====
-  installer.pods_project.targets.each do |target|
-    if target.name.start_with?('RNFB')
-      target.build_configurations.each do |config|
-        config.build_settings['HEADER_SEARCH_PATHS'] ||= '$(inherited)'
-        # Adiciona o caminho para os cabeçalhos do Firebase Core
-        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Firebase/Core/Sources"'
+    # ---> INÍCIO DA CORREÇÃO PARA O FIREBASE <---
+    # Este bloco corrige o problema de "does not define modules"
+    installer.pods_project.targets.each do |target|
+      if ['FirebaseCoreInternal', 'GoogleUtilities', 'FirebaseStorage', 'FirebaseAppCheckInterop', 'FirebaseAuthInterop', 'FirebaseCore', 'FirebaseCoreExtension'].include?(target.name)
+        target.build_configurations.each do |config|
+          config.build_settings['DEFINES_MODULE'] = 'YES'
+        end
       end
     end
-    # Garante a versão do iOS em todos os targets
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
+    # ---> FIM DA CORREÇÃO PARA O FIREBASE <---
+
+    # Workaround para erro de "duplicate symbols"
+    installer.pods_project.targets.each do |target|
+      if target.name == 'React-Core'
+        target.build_configurations.each do |config|
+          config.build_settings['OTHER_LDFLAGS'] = '-ld_classic'
+        end
+      end
     end
   end
-  # ===== A CORREÇÃO MÁGICA TERMINA AQUI =====
-
 end

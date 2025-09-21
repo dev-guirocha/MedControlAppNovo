@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, fontSizes } from '~/theme/tokens';
+import { colors, spacing, fontSizes } from './tokens';
 
 export const mk = {
   screen: StyleSheet.create({

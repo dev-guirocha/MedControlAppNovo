@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Modal, Pressable, Platform, ScrollView } from 'react-native';
+import {
+    View,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    SafeAreaView,
+    Modal,
+    Pressable,
+    Platform,
+    ScrollView,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, getFontSize, spacing, medicationColors } from '@/constants/theme';
 import { Button } from '@/components/Button';
@@ -7,12 +17,40 @@ import { ChevronDown, X, Sun, Moon, CloudSun, Check } from 'lucide-react-native'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useAuthStore } from '@/hooks/useAuthStore';
+import type { FontScale } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
+import type { Medication } from '@/types/medication';
 
 const FORMS = ['comprimido', 'cápsula', 'líquido', 'injeção', 'pomada', 'gotas'];
 const FREQUENCIES = ['diária', 'a cada 8h', 'a cada 12h', 'semanal', 'quando necessário'];
 
-const PickerModal = ({ visible, title, options, onSelect, onClose, fontScale }) => (
+type MedicationFormState = {
+    id?: string;
+    name: string;
+    dosage: string;
+    color: string;
+    form: Medication['form'];
+    frequency: Medication['frequency'];
+    times: string[];
+    stock: string;
+    stockAlertThreshold: string;
+    instructions: string;
+    doctor: string;
+    condition: string;
+};
+
+type PickerModalProps = {
+    visible: boolean;
+    title: string;
+    options: string[];
+    onSelect: (value: string) => void;
+    onClose: () => void;
+    fontScale: FontScale;
+};
+
+type PickerModalState = Omit<PickerModalProps, 'fontScale' | 'onClose'>;
+
+const PickerModal: React.FC<PickerModalProps> = ({ visible, title, options, onSelect, onClose, fontScale }) => (
     <Modal visible={visible} transparent onRequestClose={onClose} animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
         <View style={styles.pickerModalContainer}>
@@ -30,7 +68,9 @@ const PickerModal = ({ visible, title, options, onSelect, onClose, fontScale }) 
     </Modal>
 );
 
-const TimePreset = ({ label, icon, onPress }: { label: string; icon: React.ReactNode; onPress: () => void }) => (
+type TimePresetProps = { label: string; icon: React.ReactNode; onPress: () => void };
+
+const TimePreset: React.FC<TimePresetProps> = ({ label, icon, onPress }) => (
     <TouchableOpacity style={styles.presetButton} onPress={onPress}>
         {icon}
         <Text style={styles.presetText}>{label}</Text>
@@ -43,27 +83,51 @@ export default function MedicationFormScreen() {
     const { fontScale } = useAuthStore();
     const fontSize = getFontSize(fontScale);
 
-    const [formData, setFormData] = useState({
-        id: params.id as string | undefined,
-        name: (params.selectedName as string) ?? (params.name as string) ?? '',
-        dosage: (params.selectedDosage as string) ?? (params.dosage as string) ?? '',
-        color: (params.color as string) ?? medicationColors[0],
-        form: (params.form as any) ?? 'comprimido',
-        frequency: (params.frequency as any) ?? 'diária',
-        times: Array.isArray(params.times) ? params.times : ((params.times && [params.times]) || ['08:00']),
-        stock: (params.stock as string) ?? '',
-        stockAlertThreshold: (params.stockAlertThreshold as string) ?? '',
-        instructions: (params.instructions as string) ?? '',
-        doctor: (params.doctor as string) ?? '',
-        condition: (params.condition as string) ?? '',
+    const toStringParam = (value: unknown, fallback = ''): string => {
+        if (Array.isArray(value)) {
+            return value[0] ?? fallback;
+        }
+        if (typeof value === 'string') {
+            return value;
+        }
+        return fallback;
+    };
+
+    const toTimesParam = (value: unknown): string[] => {
+        if (!value) return ['08:00'];
+        if (Array.isArray(value)) {
+            return value.filter((item): item is string => Boolean(item));
+        }
+        if (typeof value === 'string') {
+            return [value];
+        }
+        return ['08:00'];
+    };
+
+    const initialId = toStringParam(params.id);
+    const initialSelectedName = toStringParam(params.selectedName);
+    const [formData, setFormData] = useState<MedicationFormState>({
+        id: initialId || undefined,
+        name: initialSelectedName || toStringParam(params.name),
+        dosage: toStringParam(params.selectedDosage) || toStringParam(params.dosage),
+        color: toStringParam(params.color, medicationColors[0]),
+        form: (toStringParam(params.form, 'comprimido') as Medication['form']),
+        frequency: (toStringParam(params.frequency, 'diária') as Medication['frequency']),
+        times: toTimesParam(params.times),
+        stock: toStringParam(params.stock),
+        stockAlertThreshold: toStringParam(params.stockAlertThreshold),
+        instructions: toStringParam(params.instructions),
+        doctor: toStringParam(params.doctor),
+        condition: toStringParam(params.condition),
     });
 
     useEffect(() => {
-        if (params.selectedName) {
-            setFormData(prev => ({
+        const selectedName = toStringParam(params.selectedName);
+        if (selectedName) {
+            setFormData((prev) => ({
                 ...prev,
-                name: params.selectedName as string,
-                dosage: (params.selectedDosage as string) || '',
+                name: selectedName,
+                dosage: toStringParam(params.selectedDosage),
             }));
         }
     }, [params.selectedName, params.selectedDosage]);
@@ -72,21 +136,38 @@ export default function MedicationFormScreen() {
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [timePickerIndex, setTimePickerIndex] = useState(0);
     const [tempTime, setTempTime] = useState(new Date());
-    const [pickerModal, setPickerModal] = useState({ visible: false, title: '', options: [], onSelect: (value: string) => {} });
+    const [pickerModal, setPickerModal] = useState<PickerModalState>({
+        visible: false,
+        title: '',
+        options: [],
+        onSelect: () => {},
+    });
 
     const showMultipleTimes = formData.frequency === 'diária' || formData.frequency === 'semanal';
 
-    const openPicker = (title: string, options: string[], onSelect: (value: string) => void) => setPickerModal({ visible: true, title, options, onSelect });
-    const handleSelectForm = (value: string) => { setFormData(prev => ({ ...prev, form: value as any })); setPickerModal({ ...pickerModal, visible: false }); };
-    const handleSelectFrequency = (value: string) => {
-        if ((value === 'a cada 8h' || value === 'a cada 12h') && formData.times.length > 1) {
-            setFormData(prev => ({ ...prev, frequency: value as any, times: [prev.times[0]] }));
-        } else {
-            setFormData(prev => ({ ...prev, frequency: value as any }));
-        }
-        setPickerModal({ ...pickerModal, visible: false });
+    const stockNumber = Number(formData.stock);
+    const thresholdNumber = Number(formData.stockAlertThreshold);
+    const stockIsValid = !Number.isNaN(stockNumber) && stockNumber >= 0;
+    const thresholdIsValid = !Number.isNaN(thresholdNumber) && thresholdNumber >= 0;
+    const thresholdBelowStock = stockIsValid && thresholdIsValid ? thresholdNumber < stockNumber : true;
+
+    const openPicker = (title: string, options: string[], onSelect: (value: string) => void) =>
+        setPickerModal({ visible: true, title, options, onSelect });
+    const closePicker = () => setPickerModal((prev) => ({ ...prev, visible: false }));
+    const handleSelectForm = (value: string) => {
+        setFormData((prev) => ({ ...prev, form: value as Medication['form'] }));
+        closePicker();
     };
-    const handleSelectColor = (color: string) => setFormData(prev => ({ ...prev, color }));
+    const handleSelectFrequency = (value: string) => {
+        const typedValue = value as Medication['frequency'];
+        if ((typedValue === 'a cada 8h' || typedValue === 'a cada 12h') && formData.times.length > 1) {
+            setFormData((prev) => ({ ...prev, frequency: typedValue, times: [prev.times[0]] }));
+        } else {
+            setFormData((prev) => ({ ...prev, frequency: typedValue }));
+        }
+        closePicker();
+    };
+    const handleSelectColor = (color: string) => setFormData((prev) => ({ ...prev, color }));
     const onTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
         const currentDate = selectedDate || tempTime;
         if (Platform.OS === 'android') setShowTimePicker(false);
@@ -109,10 +190,18 @@ export default function MedicationFormScreen() {
         setTimePickerIndex(index);
         setShowTimePicker(true);
     };
-    const handleTimeChange = (index: number, value: string) => { const newTimes = [...formData.times]; newTimes[index] = value; setFormData(prev => ({ ...prev, times: newTimes.sort() })); };
-    const handleRemoveTime = (index: number) => { if (formData.times.length > 1) setFormData(prev => ({ ...prev, times: prev.times.filter((_, i) => i !== index) })); };
-    const handleAddTime = () => setFormData(prev => ({ ...prev, times: [...prev.times, '12:00'] }));
-    const setTimePreset = (times: string[]) => setFormData(prev => ({ ...prev, times }));
+    const handleTimeChange = (index: number, value: string) => {
+        const newTimes = [...formData.times];
+        newTimes[index] = value;
+        setFormData((prev) => ({ ...prev, times: [...newTimes].sort() }));
+    };
+    const handleRemoveTime = (index: number) => {
+        if (formData.times.length > 1) {
+            setFormData((prev) => ({ ...prev, times: prev.times.filter((_, i) => i !== index) }));
+        }
+    };
+    const handleAddTime = () => setFormData((prev) => ({ ...prev, times: [...prev.times, '12:00'] }));
+    const setTimePreset = (times: string[]) => setFormData((prev) => ({ ...prev, times: [...times] }));
     const handleNext = () => router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...formData, times: formData.times } as any });
     const isValid = !!(formData.name.trim() && formData.dosage.trim() && formData.stock.trim() && formData.stockAlertThreshold.trim());
 
@@ -167,13 +256,47 @@ export default function MedicationFormScreen() {
                         )}
                     </View>
 
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Estoque Inicial *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stock)} onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 30" keyboardType="numeric"/></View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Limite para Alerta de Estoque *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={String(formData.stockAlertThreshold)} onChangeText={(text) => setFormData(prev => ({ ...prev, stockAlertThreshold: text.replace(/[^0-9]/g, '') }))} placeholder="Ex: 5" keyboardType="numeric"/></View>
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, {fontSize: fontSize.md}]}>Estoque Inicial *</Text>
+                        <TextInput
+                            style={[styles.input, {fontSize: fontSize.lg}]}
+                            value={String(formData.stock)}
+                            onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text.replace(/[^0-9]/g, '') }))}
+                            placeholder="Ex: 30"
+                            keyboardType="numeric"
+                        />
+                        {stockIsValid && (
+                            <Text style={[styles.helperText, { color: colors.textSecondary }]}>Estoque atual: {stockNumber} unidades</Text>
+                        )}
+                    </View>
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, {fontSize: fontSize.md}]}>Limite para Alerta de Estoque *</Text>
+                        <TextInput
+                            style={[styles.input, {fontSize: fontSize.lg}]}
+                            value={String(formData.stockAlertThreshold)}
+                            onChangeText={(text) => setFormData(prev => ({ ...prev, stockAlertThreshold: text.replace(/[^0-9]/g, '') }))}
+                            placeholder="Ex: 5"
+                            keyboardType="numeric"
+                        />
+                        {thresholdIsValid && thresholdBelowStock && (
+                            <Text style={[styles.helperText, { color: colors.success }]}>Você será alertado quando restarem {thresholdNumber} unidades.</Text>
+                        )}
+                        {thresholdIsValid && !thresholdBelowStock && stockIsValid && (
+                            <Text style={[styles.helperText, { color: colors.danger }]}>O limite de alerta deve ser menor que o estoque inicial.</Text>
+                        )}
+                    </View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Instruções Especiais (Opcional)</Text><TextInput style={[styles.input, styles.textArea, {fontSize: fontSize.lg}]} value={formData.instructions} onChangeText={(text) => setFormData(prev => ({ ...prev, instructions: text }))} placeholder="Ex: Tomar com alimentos" multiline/></View>
                 </View>
             </KeyboardAwareScrollView>
             
-            <PickerModal visible={pickerModal.visible} title={pickerModal.title} options={pickerModal.options} onSelect={pickerModal.onSelect} onClose={() => setPickerModal({ ...pickerModal, visible: false })} fontScale={fontScale}/>
+            <PickerModal
+                visible={pickerModal.visible}
+                title={pickerModal.title}
+                options={pickerModal.options}
+                onSelect={pickerModal.onSelect}
+                onClose={closePicker}
+                fontScale={fontScale}
+            />
 
             {showTimePicker && (Platform.OS === 'ios' ? (<Modal transparent={true} visible={showTimePicker} animationType="fade" onRequestClose={() => setShowTimePicker(false)}><Pressable style={styles.modalBackdrop} onPress={() => setShowTimePicker(false)} /><View style={styles.modalContent}><DateTimePicker value={tempTime} mode="time" is24Hour={true} display="spinner" onChange={onTimeChange}/><Button title="Concluído" onPress={handleConfirmTime} /></View></Modal>) : (<DateTimePicker value={tempTime} mode="time" is24Hour={true} display="default" onChange={onTimeChange}/>))}
             
@@ -189,6 +312,7 @@ const styles = StyleSheet.create({
     inputGroup: { marginBottom: spacing.lg },
     label: { fontWeight: '500', color: colors.text, marginBottom: spacing.sm },
     input: { borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, color: colors.text, backgroundColor: colors.cardBackground, minHeight: 56 },
+    helperText: { marginTop: spacing.xs, fontSize: 14 },
     placeholderText: { color: colors.textSecondary },
     textArea: { minHeight: 100, textAlignVertical: 'top' },
     picker: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, backgroundColor: colors.cardBackground, minHeight: 56 },

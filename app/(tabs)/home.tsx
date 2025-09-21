@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDoseSchedule } from '@/hooks/medication-store';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
@@ -10,6 +11,7 @@ import { Text as StyledText } from '@/components/StyledText';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAppLoadingStore } from '@/hooks/useAppLoadingStore';
 import { ScheduledDose } from '@/types/medication';
+import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -18,11 +20,25 @@ export default function HomeScreen() {
   const fontSize = getFontSize(fontScale);
   const { medications: allMedications, logDose } = useMedicationStore();
   const { isLoading } = useAppLoadingStore();
+  const { doseHistory } = useDoseHistoryStore();
+  const insets = useSafeAreaInsets();
 
   const schedule = useDoseSchedule();
   const missedDoses = schedule.filter(dose => dose.isMissed);
   const upcomingDoses = schedule.filter(dose => !dose.isMissed);
   const nextDose = upcomingDoses[0] || null;
+
+  const todayKey = new Date().toISOString().split('T')[0];
+  const todayHistory = doseHistory.filter(item => {
+    if (!item.scheduledTime) return false;
+    const date = new Date(item.scheduledTime);
+    return !Number.isNaN(date.getTime()) && date.toISOString().split('T')[0] === todayKey;
+  });
+  const takenToday = todayHistory.filter(item => item.status === 'taken').length;
+  const skippedToday = todayHistory.filter(item => item.status === 'skipped').length;
+  const pendingToday = upcomingDoses.length + missedDoses.length;
+  const totalDosesToday = takenToday + skippedToday + pendingToday;
+  const completionRate = totalDosesToday > 0 ? takenToday / totalDosesToday : 0;
 
   const getGreeting = useCallback(() => {
     const hour = new Date().getHours();
@@ -50,13 +66,40 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
         <View style={styles.header}>
           <StyledText style={homeStyles.greeting}>{getGreeting()}, {userProfile.name}!</StyledText>
           <StyledText style={homeStyles.date}>
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </StyledText>
         </View>
+
+        {allMedications.length > 0 && (
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryColumn}>
+                <StyledText style={homeStyles.summaryLabel}>Doses tomadas</StyledText>
+                <StyledText style={homeStyles.summaryValue}>{takenToday}</StyledText>
+              </View>
+              <View style={styles.summaryColumn}>
+                <StyledText style={homeStyles.summaryLabel}>Pendentes</StyledText>
+                <StyledText style={[homeStyles.summaryValue, pendingToday ? homeStyles.summaryWarning : null]}>{pendingToday}</StyledText>
+              </View>
+              <View style={styles.summaryColumn}>
+                <StyledText style={homeStyles.summaryLabel}>Puladas</StyledText>
+                <StyledText style={[homeStyles.summaryValue, skippedToday ? homeStyles.summarySkipped : null]}>{skippedToday}</StyledText>
+              </View>
+            </View>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${completionRate * 100}%` }]} />
+              </View>
+              <StyledText style={homeStyles.progressText}>
+                {totalDosesToday > 0 ? `${takenToday} de ${totalDosesToday} doses concluídas` : 'Nenhuma dose programada para hoje'}
+              </StyledText>
+            </View>
+          </View>
+        )}
 
         {allMedications.length === 0 ? (
           <View style={styles.emptyState}>
@@ -105,7 +148,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 16 + (Platform.OS === 'ios' ? insets.bottom : 0) }]}
         onPress={() => router.push('/(modals)/add-medication')}
         accessibilityLabel="Adicionar medicamento"
         accessibilityRole="button"
@@ -131,6 +174,11 @@ const homeStyles = StyleSheet.create({
     letterSpacing: 0.5 
   },
   missedSectionTitle: { color: colors.danger },
+  summaryLabel: { fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+  summaryValue: { fontSize: 20, fontWeight: '700', color: colors.text },
+  summaryWarning: { color: colors.warning },
+  summarySkipped: { color: colors.danger },
+  progressText: { marginTop: spacing.sm, color: colors.textSecondary, fontSize: 13 },
 });
 
 const styles = StyleSheet.create({
@@ -138,6 +186,12 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingBottom: 100, flexGrow: 1, paddingHorizontal: 16 },
   header: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  summaryCard: { marginTop: spacing.lg, backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  summaryColumn: { flex: 1 },
+  progressContainer: { marginTop: spacing.lg },
+  progressTrack: { height: 10, borderRadius: 6, backgroundColor: colors.border, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.success },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyStateSection: { alignItems: 'center', paddingVertical: spacing.xxl },
   fab: {

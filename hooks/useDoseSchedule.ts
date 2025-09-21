@@ -18,7 +18,11 @@ export function useDoseSchedule(): ScheduledDose[] {
     const dayKey = toLocalDayKey(today);
 
     // histórico já tomado/pulado neste dia
-    const logged = new Set<string>(doseHistory.map((h) => h.doseId).filter(Boolean));
+    const logged = new Set(
+      doseHistory
+        .map((h) => h.doseId ?? h.id)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    );
 
     const out: ScheduledDose[] = [];
 
@@ -35,12 +39,24 @@ export function useDoseSchedule(): ScheduledDose[] {
         }
       }
 
+      const createdAt = med.createdAt ? new Date(med.createdAt) : null;
       const times = getTimesForFrequency(med);
       for (const time of times) {
-        const dt = timeToDate(today, time);
+        let dt = timeToDate(today, time);
         if (!dt) continue; // ignora horários inválidos
 
-        const doseId = `${med.id}::${dayKey}::${time}`;
+        let effectiveDayKey = dayKey;
+        if (createdAt && !Number.isNaN(createdAt.getTime()) && createdAt.getTime() > dt.getTime()) {
+          dt = new Date(dt.getTime());
+          dt.setDate(dt.getDate() + 1);
+          effectiveDayKey = toLocalDayKey(dt);
+        }
+
+        if (effectiveDayKey !== dayKey) {
+          continue;
+        }
+
+        const doseId = `${med.id}::${effectiveDayKey}::${time}`;
         if (logged.has(doseId)) continue;
 
         out.push({

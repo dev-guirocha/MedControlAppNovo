@@ -8,6 +8,7 @@ export function Button({
   onPress,
   title,
   variant = 'primary',
+  size = 'medium',
   loading = false,
   disabled = false,
   iconName,
@@ -29,6 +30,8 @@ export function Button({
     isSuccess && styles.successButton,
     isDanger && styles.dangerButton,
     isDisabled && styles.disabledButton,
+    size === 'small' && styles.smallButton,
+    size === 'large' && styles.largeButton,
   ];
 
   const textStyles = [
@@ -38,6 +41,8 @@ export function Button({
     isSuccess && styles.successText,
     isDanger && styles.dangerText,
     isDisabled && styles.disabledText,
+    size === 'small' && styles.smallText,
+    size === 'large' && styles.largeText,
   ];
 
   const iconColor = isSecondary ? colors.primary : colors.background;
@@ -82,6 +87,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
   },
+  smallButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  largeButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+  },
   primaryButton: { backgroundColor: colors.primary },
   secondaryButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.text },
   successButton: { backgroundColor: colors.success },
@@ -89,6 +102,8 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.6 },
   pressedButton: { opacity: 0.8 },
   textBase: { fontSize: 16, fontWeight: '600' },
+  smallText: { fontSize: 14 },
+  largeText: { fontSize: 18 },
   primaryText: { color: colors.background },
   secondaryText: { color: colors.text },
   successText: { color: colors.background },

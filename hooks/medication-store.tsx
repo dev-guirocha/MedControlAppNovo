@@ -10,7 +10,11 @@ export function useDoseSchedule(): ScheduledDose[] {
     return useMemo(() => {
         const now = new Date();
         const allTodaysDoses: ScheduledDose[] = [];
-        const loggedDoseIds = new Set(doseHistory.map(h => h.id));
+        const loggedDoseIds = new Set(
+            doseHistory
+                .map((h) => h.doseId ?? h.id)
+                .filter((value): value is string => Boolean(value))
+        );
 
         for (const med of medications) {
             if (med.frequency === 'quando necessário' || !med.times || med.times.length === 0) {
@@ -19,6 +23,9 @@ export function useDoseSchedule(): ScheduledDose[] {
 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const baseDayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+                today.getDate()
+            ).padStart(2, '0')}`;
 
             let potentialTimes: string[] = [];
 
@@ -47,12 +54,28 @@ export function useDoseSchedule(): ScheduledDose[] {
             }
 
             // Gera as doses com base nos horários calculados
-            for (const time of potentialTimes) {
-                const [hour, minute] = time.split(':').map(Number);
-                const doseTime = new Date(today);
-                doseTime.setHours(hour, minute);
+        const createdAt = med.createdAt ? new Date(med.createdAt) : null;
 
-                const doseId = `${med.id}-${doseTime.toISOString()}`;
+        for (const time of potentialTimes) {
+                const [hour, minute] = time.split(':').map(Number);
+                let doseTime = new Date(today);
+                doseTime.setHours(hour, minute, 0, 0);
+
+                let dayKey = baseDayKey;
+
+                if (createdAt && !Number.isNaN(createdAt.getTime()) && createdAt.getTime() > doseTime.getTime()) {
+                    doseTime = new Date(doseTime.getTime());
+                    doseTime.setDate(doseTime.getDate() + 1);
+                    dayKey = `${doseTime.getFullYear()}-${String(doseTime.getMonth() + 1).padStart(2, '0')}-${String(
+                        doseTime.getDate()
+                    ).padStart(2, '0')}`;
+                }
+
+                const doseId = `${med.id}::${dayKey}::${time}`;
+
+                if (dayKey !== baseDayKey) {
+                    continue;
+                }
 
                 if (!loggedDoseIds.has(doseId)) {
                     allTodaysDoses.push({
@@ -66,7 +89,7 @@ export function useDoseSchedule(): ScheduledDose[] {
                 }
             }
         }
-        
+
         return allTodaysDoses.sort((a, b) => {
             if (a.isMissed && !b.isMissed) return -1;
             if (!a.isMissed && b.isMissed) return 1;

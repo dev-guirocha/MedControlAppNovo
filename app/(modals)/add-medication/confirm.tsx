@@ -30,6 +30,7 @@ export default function ConfirmMedicationScreen() {
       name: params.name as string,
       dosage: params.dosage as string,
       doctor: params.doctor as string,
+      condition: Array.isArray(params.condition) ? params.condition[0] : (params.condition as string | undefined) || '',
       form: params.form as any,
       frequency: params.frequency as any,
       times: Array.isArray(params.times) ? params.times as string[] : [params.times as string],
@@ -58,17 +59,6 @@ export default function ConfirmMedicationScreen() {
       fieldValue: { fontSize: fontSize.lg, color: colors.text, fontWeight: '500' },
   });
   
-  const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg },
-    card: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
-    field: { paddingVertical: spacing.md },
-    divider: { height: 1, backgroundColor: colors.border },
-    footer: { flexDirection: 'row', padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md },
-    correctButton: { flex: 1 },
-    confirmButton: { flex: 2 },
-  });
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -95,7 +85,7 @@ export default function ConfirmMedicationScreen() {
           onPress={handleCorrect}
           size="medium"
           variant="secondary"
-          iconName="x" // Correção: "x" para "X"
+          iconName="X"
           style={styles.correctButton}
         />
         <Button
@@ -104,7 +94,7 @@ export default function ConfirmMedicationScreen() {
           size="medium"
           variant="success"
           loading={loading}
-          iconName="check" // Correção: "check" para "Check"
+          iconName="Check"
           style={styles.confirmButton}
         />
       </View>

@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+
+import { colors } from '@/constants/theme';
 import { Medication } from '@/types/medication';
 
 const MEDICATION_REMINDER_CATEGORY_ID = 'medication-reminder';
@@ -13,7 +15,13 @@ export async function setupNotificationCategories() {
   ]);
 
   // Categoria simples para o alerta de estoque (sem ações)
-  await Notifications.setNotificationCategoryAsync(STOCK_ALERT_CATEGORY_ID, []);
+  await Notifications.setNotificationCategoryAsync(STOCK_ALERT_CATEGORY_ID, [
+    {
+      identifier: 'stock-acknowledge',
+      buttonTitle: 'Ok',
+      options: { opensAppToForeground: true },
+    },
+  ]);
 }
 
 Notifications.setNotificationHandler({

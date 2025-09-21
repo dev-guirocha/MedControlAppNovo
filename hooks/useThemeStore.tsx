@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { DevSettings } from 'react-native';
-import { THEME_MODE_KEY, THEME_BOOT_APPLIED_KEY } from '~/constants/keys';
+import { THEME_MODE_KEY, THEME_BOOT_APPLIED_KEY } from '../src/constants/keys';
 
 export type ThemePref = 'system' | 'light' | 'dark';
 

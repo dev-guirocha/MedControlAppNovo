@@ -1,10 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { Anamnesis } from '@/types/medication';
-import { ANAMNESIS_KEY } from '../src/constants/keys';
+import * as Crypto from 'expo-crypto';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+
+import { Anamnesis } from '@/types/medication';
+import { showErrorToast } from '@/lib/toastHelper';
 import { useAuthStore } from './useAuthStore';
+import { ANAMNESIS_KEY } from '../src/constants/keys';
 
 type AnamnesisData = Omit<Anamnesis, 'id' | 'lastUpdated'>;
 
@@ -13,7 +16,7 @@ interface AnamnesisState {
   loadAnamnesis: () => Promise<void>;
   saveAnamnesis: (anamnesisData: AnamnesisData) => Promise<void>;
   updateAnamnesis: (updates: Partial<Anamnesis>) => Promise<void>;
-  exportAnamnesis: (currentData: AnamnesisData) => Promise<void>; // ✅ Modificado para receber os dados
+  exportAnamnesis: (currentData: AnamnesisData) => Promise<boolean>; // ✅ Modificado para receber os dados
 }
 
 const createAnamnesisHtml = (anamnesis: AnamnesisData, userName: string): string => {
@@ -54,11 +57,69 @@ const createAnamnesisHtml = (anamnesis: AnamnesisData, userName: string): string
 export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
   anamnesis: null,
   
-  loadAnamnesis: async () => { /* ... (sem alterações) ... */ },
-  
-  saveAnamnesis: async (anamnesisData) => { /* ... (sem alterações) ... */ },
+  loadAnamnesis: async () => {
+    try {
+      const stored = await AsyncStorage.getItem(ANAMNESIS_KEY);
+      if (!stored) return;
 
-  updateAnamnesis: async (updates) => { /* ... (sem alterações) ... */ },
+      const parsed: Anamnesis = JSON.parse(stored);
+      set({ anamnesis: parsed });
+    } catch (error) {
+      console.error('Error loading anamnesis:', error);
+    }
+  },
+  
+  saveAnamnesis: async (anamnesisData) => {
+    try {
+      const current = get().anamnesis;
+      const updated: Anamnesis = {
+        ...anamnesisData,
+        id: current?.id ?? Crypto.randomUUID(),
+        lastUpdated: new Date().toISOString(),
+      };
+
+      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(updated));
+      set({ anamnesis: updated });
+    } catch (error) {
+      console.error('Error saving anamnesis:', error);
+      showErrorToast('Erro ao salvar a anamnese.');
+    }
+  },
+
+  updateAnamnesis: async (updates) => {
+    const current = get().anamnesis;
+    if (!current) {
+      // Se não houver cadastro prévio, salva um novo com os dados informados.
+      await get().saveAnamnesis({
+        chronicConditions: updates.chronicConditions ?? [''],
+        allergies: updates.allergies ?? [''],
+        surgeries: updates.surgeries ?? [''],
+        familyHistory: updates.familyHistory ?? {
+          hypertension: false,
+          diabetes: false,
+          heartDisease: false,
+          cancer: false,
+          other: '',
+        },
+        otherNotes: updates.otherNotes ?? '',
+      });
+      return;
+    }
+
+    try {
+      const merged: Anamnesis = {
+        ...current,
+        ...updates,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(merged));
+      set({ anamnesis: merged });
+    } catch (error) {
+      console.error('Error updating anamnesis:', error);
+      showErrorToast('Erro ao atualizar a anamnese.');
+    }
+  },
 
   exportAnamnesis: async (currentData) => {
     const userProfile = useAuthStore.getState().userProfile;
@@ -76,7 +137,7 @@ export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
     }
 
     try {
-      const htmlContent = createAnamnesisHtml(currentData, userProfile.name);
+      const htmlContent = createAnamnesisHtml(currentData, userProfile.name ?? 'Paciente');
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Compartilhar Anamnese' });

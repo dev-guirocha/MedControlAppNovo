@@ -1,10 +1,10 @@
 // src/constants/medication-presets.ts
-import type { MedicationPayload } from '@/types/medication';
+import type { Medication } from '@/types/medication';
 
 export type MedicationPreset = {
   name: string;     // sem forma farmacêutica no título
   dosage: string;   // ex.: "500 mg", "20 mg/mL", "25 mg"
-  form?: MedicationPayload['form']; // guardado separadamente
+  form?: Medication['form']; // guardado separadamente
 };
 
 export const MEDICATION_PRESETS: MedicationPreset[] = [

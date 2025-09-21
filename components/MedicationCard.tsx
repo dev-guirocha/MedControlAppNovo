@@ -81,7 +81,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
             title="Tomei" 
             onPress={() => onTakeDose(medication)} 
             variant="success" 
-            iconName="check"
+            iconName="Check"
           />
         </View>
       )}

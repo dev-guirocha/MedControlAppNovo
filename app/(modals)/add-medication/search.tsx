@@ -7,6 +7,12 @@ import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { Text } from '@/components/StyledText';
 import { Search, X, CornerDownLeft } from 'lucide-react-native';
 
+type Suggestion = {
+  name: string;
+  dosage: string;
+  isSuggestion?: boolean;
+};
+
 export default function SearchMedicationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -14,9 +20,9 @@ export default function SearchMedicationScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const fontSize = getFontSize('medium');
 
-  const allSuggestions = useMemo(() => {
-    const userMedsFormatted = userMedications.map(med => ({ name: med.name, dosage: med.dosage }));
-    const combined = [...COMMON_MEDICATIONS, ...userMedsFormatted];
+  const allSuggestions = useMemo<Suggestion[]>(() => {
+    const userMedsFormatted: Suggestion[] = userMedications.map(med => ({ name: med.name, dosage: med.dosage }));
+    const combined: Suggestion[] = [...COMMON_MEDICATIONS.map(item => ({ ...item, isSuggestion: true })), ...userMedsFormatted];
     const uniqueSuggestions = Array.from(new Map(combined.map(item => [item.name.toLowerCase(), item])).values());
     return uniqueSuggestions.sort((a, b) => a.name.localeCompare(b.name));
   }, [userMedications]);
@@ -91,7 +97,14 @@ export default function SearchMedicationScreen() {
         keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.suggestionItem} onPress={() => handleSelectMedication(item)}>
-            <Text style={[styles.suggestionText, { fontSize: fontSize.md }]}>{item.name}</Text>
+            <View style={styles.suggestionHeader}>
+              <Text style={[styles.suggestionText, { fontSize: fontSize.md }]}>{item.name}</Text>
+              {item.isSuggestion ? (
+                <View style={styles.suggestionBadge}>
+                  <Text style={styles.suggestionBadgeText}>Sugestão</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={[styles.suggestionDosage, { fontSize: fontSize.sm }]}>{item.dosage}</Text>
           </TouchableOpacity>
         )}
@@ -110,8 +123,11 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, height: 48, color: colors.text, marginLeft: spacing.sm },
   listContent: { paddingHorizontal: spacing.lg },
   suggestionItem: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  suggestionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   suggestionText: { fontWeight: '600', color: colors.text },
   suggestionDosage: { color: colors.textSecondary, marginTop: 2 },
+  suggestionBadge: { backgroundColor: colors.primaryFaded, borderRadius: 12, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  suggestionBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   addNewItem: {
     flexDirection: 'row',
     alignItems: 'center',
