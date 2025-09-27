@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EAS_PROJECT_ROOT_INSTALL_COMMAND": "npm install"
+      },
       "android": {
         "gradleCommand": ":app:assembleDebug"
       },
@@ -15,11 +18,17 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EAS_PROJECT_ROOT_INSTALL_COMMAND": "npm install"
+      }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "env": {
+        "EAS_PROJECT_ROOT_INSTALL_COMMAND": "npm install"
+      },
       "android": {
         "buildType": "app-bundle"
       },

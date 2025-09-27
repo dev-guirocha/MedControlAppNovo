@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Pill, Stethoscope, User, History } from 'lucide-react-native';
 import { colors } from '@/constants/theme';
 import { setupNotificationCategories, registerForPushNotificationsAsync } from '@/lib/notifications';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
     const initializeNotifications = async () => {
       try {
@@ -22,7 +25,11 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarStyle: { height: 60, paddingBottom: 10, paddingTop: 5 },
+        tabBarStyle: {
+          height: 56 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 10),
+          paddingTop: 6,
+        },
         headerStyle: { backgroundColor: colors.background },
         headerTitleStyle: { color: colors.text, fontSize: 18, fontWeight: '600' },
       }}>

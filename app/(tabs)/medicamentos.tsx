@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, SectionList, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SectionList, TextInput, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
@@ -49,7 +50,7 @@ export default function AllMedicationsScreen() {
   // Se não houver nenhum medicamento cadastrado, mostra o estado de boas-vindas
   if (medications.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyState}>
           <Pill size={64} color={colors.disabled} />
           <Text style={[styles.emptyTitle, { fontSize: fontSize.xl }]}>Nenhum medicamento adicionado</Text>
@@ -60,7 +61,7 @@ export default function AllMedicationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* ✅ Barra de Busca */}
       <View style={styles.searchContainer}>
         <Search size={20} color={colors.textSecondary} />

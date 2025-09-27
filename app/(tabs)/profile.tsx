@@ -1,7 +1,8 @@
 // MedControlAppNovo/app/(tabs)/profile.tsx
 
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
@@ -65,7 +66,7 @@ export default function ProfileScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Cabeçalho do Perfil */}
       <View style={styles.profileHeader}>
         <View style={styles.avatar}><Text style={styles.avatarInitial}>{userInitial}</Text></View>

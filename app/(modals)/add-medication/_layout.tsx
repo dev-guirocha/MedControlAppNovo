@@ -10,6 +10,7 @@ export default function AddMedicationLayout() {
       headerTitleStyle: { fontWeight: '500' },
       headerBackTitle: "Voltar",
     }}>
+      <Stack.Screen name="index" options={{ title: "Adicionar Medicação" }} />
       <Stack.Screen name="form" options={{ title: "Cadastrar Remédio" }} />
       <Stack.Screen name="confirm" options={{ title: "Confirmar Dados" }} />
       <Stack.Screen name="logAsNeeded" options={{ title: "Registrar Dose Avulsa" }} />

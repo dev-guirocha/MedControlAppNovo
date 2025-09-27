@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, SafeAreaView, FlatList, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { DoseHistory } from '@/types/medication';
@@ -115,7 +116,7 @@ export default function HistoryScreen() {
   };
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Calendar
         onDayPress={day => setSelectedDate(day.dateString)}
         markedDates={markedDates}

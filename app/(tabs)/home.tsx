@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDoseSchedule } from '@/hooks/medication-store';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
@@ -64,9 +64,11 @@ export default function HomeScreen() {
     );
   }
 
+  const contentBottomPadding = spacing.xl + insets.bottom;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: contentBottomPadding }]}>
         <View style={styles.header}>
           <StyledText style={homeStyles.greeting}>{getGreeting()}, {userProfile.name}!</StyledText>
           <StyledText style={homeStyles.date}>

@@ -1,5 +1,6 @@
-import React, { useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, SafeAreaView, SectionList, Alert, ActivityIndicator, TouchableOpacity, Animated, Text as DefaultText } from 'react-native';
+import React, { useMemo, useCallback, useRef, useState } from 'react';
+import { View, StyleSheet, SectionList, Alert, TouchableOpacity, Animated, Text as DefaultText, Modal, Pressable, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { colors, getFontSize, spacing } from '@/constants/theme';
@@ -10,10 +11,29 @@ import { Text } from '@/components/StyledText';
 import { Plus, Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
 
 // Card da Consulta (sem lógica de arrastar)
-const AppointmentItem = React.memo(({ item, onEdit }: { item: Appointment; onEdit: (item: Appointment) => void; }) => {
+const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appointment; onEdit: (item: Appointment) => void; onViewRecipe: (recipeUri: string) => void; }) => {
     const { fontScale } = useAuthStore();
     const fontSize = getFontSize(fontScale);
-    const isPast = new Date(item.date) < new Date();
+    const appointmentDate = useMemo(() => new Date(item.date), [item.date]);
+    const isPast = appointmentDate < new Date();
+    const formattedDate = useMemo(() => {
+      const fallback = appointmentDate.toLocaleString('pt-BR');
+      if (Number.isNaN(appointmentDate.getTime())) {
+        return 'Data indisponível';
+      }
+      try {
+        return appointmentDate.toLocaleString('pt-BR', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (error) {
+        console.warn('Erro ao formatar data da consulta', error);
+        return fallback;
+      }
+    }, [appointmentDate]);
 
     return (
       <View style={[styles.card, isPast && styles.pastCard]}>
@@ -32,13 +52,19 @@ const AppointmentItem = React.memo(({ item, onEdit }: { item: Appointment; onEdi
         
         <View style={styles.cardBody}>
             <View style={styles.infoRow}><MapPin size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{item.location}</Text></View>
-            <View style={styles.infoRow}><Calendar size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text></View>
+            <View style={styles.infoRow}><Calendar size={16} color={colors.textSecondary} /><Text style={[styles.cardText, { fontSize: fontSize.md }]}>{formattedDate}</Text></View>
             {item.notes ? <Text style={[styles.notes, {fontSize: fontSize.sm}]}>Notas: {item.notes}</Text> : null}
         </View>
         
         {item.recipeImageUrl && (
             <View style={styles.cardFooter}>
-              <TouchableOpacity style={styles.recipeButton}><Receipt size={18} color={colors.primary} /><Text style={styles.recipeButtonText}>Ver Receita</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={styles.recipeButton}
+                onPress={() => onViewRecipe(item.recipeImageUrl!)}
+              >
+                <Receipt size={18} color={colors.primary} />
+                <Text style={styles.recipeButtonText}>Ver Receita</Text>
+              </TouchableOpacity>
             </View>
         )}
       </View>
@@ -46,7 +72,7 @@ const AppointmentItem = React.memo(({ item, onEdit }: { item: Appointment; onEdi
 });
 
 // ✅ NOVO: Componente que encapsula o card com a funcionalidade de arrastar
-const SwipeableAppointmentItem = ({ item, onEdit, onDelete }: { item: Appointment, onEdit: (item: Appointment) => void, onDelete: (id: string) => void }) => {
+const SwipeableAppointmentItem = ({ item, onEdit, onDelete, onViewRecipe }: { item: Appointment, onEdit: (item: Appointment) => void, onDelete: (id: string) => void, onViewRecipe: (recipeUri: string) => void }) => {
     const swipeableRef = useRef<Swipeable>(null);
 
     const handleDeletePress = () => {
@@ -74,7 +100,7 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete }: { item: Appointmen
             containerStyle={{ marginBottom: spacing.lg }}
             renderRightActions={renderRightActions}
         >
-            <AppointmentItem item={item} onEdit={onEdit} />
+            <AppointmentItem item={item} onEdit={onEdit} onViewRecipe={onViewRecipe} />
         </Swipeable>
     );
 };
@@ -85,6 +111,7 @@ export default function ConsultasScreen() {
   const { appointments, deleteAppointment } = useAppointmentStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
+  const [selectedRecipeUri, setSelectedRecipeUri] = useState<string | null>(null);
 
   const handleAddAppointment = useCallback(() => router.push('/(modals)/add-appointment'), [router]);
 
@@ -99,6 +126,10 @@ export default function ConsultasScreen() {
       { cancelable: true }
     );
   }, [deleteAppointment]);
+
+  const handleViewRecipe = useCallback((recipeUri: string) => {
+    setSelectedRecipeUri(recipeUri);
+  }, []);
 
   const sections = useMemo(() => {
     const now = new Date();
@@ -116,7 +147,7 @@ export default function ConsultasScreen() {
   
   if (appointments.length === 0) {
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
             <View style={styles.emptyState}>
               <Stethoscope size={64} color={colors.disabled}/>
               <Text style={[styles.emptyTitle, {fontSize: fontSize.xl}]}>Nenhuma consulta agendada</Text>
@@ -130,7 +161,7 @@ export default function ConsultasScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <SectionList
         sections={sections}
         keyExtractor={item => item.id}
@@ -140,6 +171,7 @@ export default function ConsultasScreen() {
               item={item}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onViewRecipe={handleViewRecipe}
             />
         )}
         renderSectionHeader={({ section: { title }}) => (
@@ -151,6 +183,25 @@ export default function ConsultasScreen() {
       <TouchableOpacity style={styles.fab} onPress={handleAddAppointment} accessibilityLabel="Adicionar nova consulta">
         <Plus color="white" size={32} />
       </TouchableOpacity>
+
+      <Modal
+        visible={!!selectedRecipeUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedRecipeUri(null)}
+      >
+        <View style={styles.recipeModalContainer}>
+          <Pressable style={styles.recipeModalBackdrop} onPress={() => setSelectedRecipeUri(null)} />
+          <View style={styles.recipeModalContent}>
+            {selectedRecipeUri ? (
+              <Image source={{ uri: selectedRecipeUri }} style={styles.recipePreviewImage} resizeMode="contain" />
+            ) : null}
+            <TouchableOpacity style={styles.recipeModalCloseButton} onPress={() => setSelectedRecipeUri(null)}>
+              <Text style={styles.recipeModalCloseButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -180,4 +231,10 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', right: 16, bottom: 16, width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
   deleteButton: { backgroundColor: colors.danger, flex: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 16 },
   deleteButtonText: { color: 'white', marginTop: spacing.xs, fontWeight: '600', fontSize: 12 },
+  recipeModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg },
+  recipeModalBackdrop: { ...StyleSheet.absoluteFillObject },
+  recipeModalContent: { backgroundColor: colors.background, borderRadius: 16, padding: spacing.lg, alignItems: 'center' },
+  recipePreviewImage: { width: '100%', height: 320, marginBottom: spacing.lg },
+  recipeModalCloseButton: { backgroundColor: colors.primary, paddingVertical: spacing.sm, paddingHorizontal: spacing.xl, borderRadius: 999 },
+  recipeModalCloseButtonText: { color: colors.background, fontWeight: '600' },
 });

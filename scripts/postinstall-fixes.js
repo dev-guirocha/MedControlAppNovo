@@ -71,3 +71,22 @@ updateFile(
   'if (drawingOpPool.isEmpty()) DrawingOp() else drawingOpPool.removeLast()',
   'if (drawingOpPool.isEmpty()) DrawingOp() else drawingOpPool.removeAt(drawingOpPool.lastIndex)'
 );
+
+const imageDir = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'react-native',
+  'Libraries',
+  'Image'
+);
+
+const imageNativePath = path.join(imageDir, 'Image.native.js');
+if (!fs.existsSync(imageNativePath)) {
+  try {
+    const shimContent = `const Platform = require('../Utilities/Platform');\n\nif (Platform.OS === 'android') {\n  module.exports = require('./Image.android');\n} else {\n  module.exports = require('./Image.ios');\n}`;
+    fs.writeFileSync(imageNativePath, shimContent, 'utf8');
+  } catch (error) {
+    console.warn('Failed to create Image.native.js shim:', error);
+  }
+}

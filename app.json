@@ -3,40 +3,22 @@
     "name": "MedControlApp",
     "slug": "MedControlApp",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "deploymentTarget": "14.0",
-      "supportsTablet": true,
-      "bundleIdentifier": "com.dev-guirocha.MedControlApp-br",
-      "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Nosso aplicativo precisa de acesso à sua galeria para que você possa selecionar uma foto de perfil.",
-        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para poder ter acesso ao fuso horário afim de manter a função de notificação baseada em horário ativa."
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "dev.guirocha.MedControlApp"
-    },
-    "web": {
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      "react-native-vision-camera"
-    ],
+    "jsEngine": "jsc",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "d156348d-dcd9-4a79-9dfb-eeb96b425192"
+      }
+    },
+    "scheme": "myapp",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/d156348d-dcd9-4a79-9dfb-eeb96b425192"
     }
   }
 }

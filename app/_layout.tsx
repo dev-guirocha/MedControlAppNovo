@@ -1,7 +1,9 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import * as Notifications from 'expo-notifications';
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootSiblingParent } from 'react-native-root-siblings';
 import { useAppLoadingStore } from "@/hooks/useAppLoadingStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -41,7 +43,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const { loadMedications } = useMedicationStore();
+  const { loadMedications, logDose } = useMedicationStore();
   const { loadUserProfile } = useAuthStore();
   const { loadHistory } = useDoseHistoryStore();
   const { loadAppointments } = useAppointmentStore();
@@ -68,6 +70,45 @@ export default function RootLayout() {
     initializeApp();
   }, []);
 
+  const handledResponsesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const handleNotificationResponse = async (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+
+      const { actionIdentifier, notification } = response;
+      if (actionIdentifier !== 'dose-taken' && actionIdentifier !== 'dose-skipped') {
+        return;
+      }
+
+      const data = notification.request.content.data || {};
+      const medicationId = typeof data.medicationId === 'string' ? data.medicationId : undefined;
+      if (!medicationId) {
+        return;
+      }
+
+      const responseKey = `${notification.request.identifier}:${actionIdentifier}:${notification.date ?? '0'}`;
+      if (handledResponsesRef.current.has(responseKey)) {
+        return;
+      }
+      handledResponsesRef.current.add(responseKey);
+
+      const scheduledTimestamp = typeof data.scheduledTimestamp === 'string' ? new Date(data.scheduledTimestamp) : undefined;
+      const triggerDate = notification.date ? new Date(notification.date) : undefined;
+      const scheduledTime = [scheduledTimestamp, triggerDate, new Date()].find((date) => date && !Number.isNaN(date.getTime()))!;
+
+      try {
+        await logDose(medicationId, scheduledTime, actionIdentifier === 'dose-taken' ? 'taken' : 'skipped');
+      } catch (error) {
+        console.error('Error handling notification response:', error);
+      }
+    };
+
+    Notifications.getLastNotificationResponseAsync().then(handleNotificationResponse);
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+    return () => subscription.remove();
+  }, [logDose]);
+
   useEffect(() => {
     if (!isLoading) {
       SplashScreen.hideAsync();
@@ -76,9 +117,11 @@ export default function RootLayout() {
 
   return (
     <RootSiblingParent>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <RootLayoutNav />
-      </GestureHandlerRootView>
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <RootLayoutNav />
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
     </RootSiblingParent>
   );
 }
