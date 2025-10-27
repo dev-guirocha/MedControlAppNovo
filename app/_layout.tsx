@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from 'expo-notifications';
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootSiblingParent } from 'react-native-root-siblings';
@@ -13,6 +13,7 @@ import { useAppointmentStore } from "@/hooks/useAppointmentStore";
 import { useAnamnesisStore } from "@/hooks/useAnamnesisStore";
 import { setupNotificationCategories } from "@/lib/notifications";
 import { colors } from '@/constants/theme';
+import { StatusBar } from 'expo-status-bar';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -115,9 +116,19 @@ export default function RootLayout() {
     }
   }, [isLoading]);
 
+  const statusBarStyle = useMemo<'light' | 'dark'>(() => {
+    const hex = (colors.background ?? '#FFFFFF').replace('#', '').padEnd(6, 'f');
+    const r = parseInt(hex.slice(0, 2), 16) || 0;
+    const g = parseInt(hex.slice(2, 4), 16) || 0;
+    const b = parseInt(hex.slice(4, 6), 16) || 0;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminance > 140 ? 'dark' : 'light';
+  }, []);
+
   return (
     <RootSiblingParent>
       <SafeAreaProvider>
+        <StatusBar style={statusBarStyle} backgroundColor={colors.background} translucent={false} />
         <GestureHandlerRootView style={{ flex: 1 }}>
           <RootLayoutNav />
         </GestureHandlerRootView>

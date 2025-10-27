@@ -51,6 +51,11 @@ updateFile(
   'const n={51:"<=16.2.0"};',
   'const n={51:">=0.0.0"};'
 );
+updateFile(
+  expoDoctorIndex,
+  '"ios","android","plugins","icon","scheme","userInterfaceStyle"',
+  '"ios","android","plugins","icon","userInterfaceStyle"'
+);
 
 const screenStackKt = path.join(
   __dirname,
