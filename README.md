@@ -47,7 +47,7 @@ Você precisará ter o Node.js, Watchman, a CLI do Expo e o ambiente de desenvol
 
 1.  **Clone o repositório:**
     ```sh
-    git clone <URL_DO_SEU_REPOSITORIO>
+    git clone <https://github.com/dev-guirocha/MedControlAppNovo>
     cd MedControlAppNovo
     ```
 
