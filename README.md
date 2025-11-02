@@ -1,7 +1,7 @@
 
 # MedControlApp
 
-![MedControlApp Logo](assets/images/logo.png)
+![MedControlApp Logo](assets/images/icon.png)
 
 **Seu assistente pessoal para o controle de medicamentos e saúde.**
 
