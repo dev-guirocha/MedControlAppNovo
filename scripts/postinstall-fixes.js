@@ -46,6 +46,22 @@ function updateFile(filePath, find, replace) {
   fs.writeFileSync(filePath, updated, 'utf8');
 }
 
+function ensureExecutable(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  try {
+    const stats = fs.statSync(filePath);
+    const executableMode = stats.mode | 0o755;
+    if ((stats.mode & 0o111) !== 0o111) {
+      fs.chmodSync(filePath, executableMode);
+    }
+  } catch (error) {
+    console.warn(`Failed to mark ${filePath} as executable:`, error);
+  }
+}
+
 ensureExpoModuleAtProjectRoot('expo-modules-core');
 
 const expoModulesCoreIOSDir = path.join(
@@ -838,3 +854,15 @@ if (!fs.existsSync(imageNativePath)) {
     console.warn('Failed to create Image.native.js shim:', error);
   }
 }
+
+ensureExecutable(
+  path.join(
+    __dirname,
+    '..',
+    'node_modules',
+    '@react-native-community',
+    'cli',
+    'build',
+    'bin.js'
+  )
+);
