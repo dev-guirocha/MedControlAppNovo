@@ -33,6 +33,9 @@ GoogleService-Info.plist
 .DS_Store
 Thumbs.db
 
+# --- Editor / IDE ---
+.vscode/
+
 # ===================== iOS / Xcode =====================
 
 # Workspaces & user data
@@ -44,6 +47,7 @@ Thumbs.db
 # DerivedData & build outputs
 DerivedData/
 ios/build/
+ios/build/generated/
 build/
 
 # CocoaPods
