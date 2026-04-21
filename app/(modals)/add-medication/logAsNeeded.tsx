@@ -7,6 +7,7 @@ import { Medication } from '@/types/medication';
 import Toast from 'react-native-root-toast';
 import { CheckCircle, Search, Pill, Inbox } from 'lucide-react-native';
 import { COMMON_MEDICATIONS } from '@/constants/commonMedications';
+import { useMedicationSuggestionsStore } from '@/hooks/useMedicationSuggestionsStore';
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
 
@@ -37,6 +38,7 @@ export default function LogAsNeededScreen() {
   const router = useRouter();
   // ✅ CORREÇÃO: `logDose` vem do useMedicationStore
   const { medications, addMedication, logDose } = useMedicationStore();
+  const { suggestions: learnedSuggestions } = useMedicationSuggestionsStore();
   const { fontScale } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -74,7 +76,7 @@ export default function LogAsNeededScreen() {
               Toast.show(`${newMed.name} foi adicionado e a dose registrada!`, {
                  duration: Toast.durations.LONG,
                  backgroundColor: colors.success,
-                 textColor: colors.background,
+                 textColor: colors.textInverse,
               });
               router.replace('/(tabs)/home');
             },
@@ -85,14 +87,19 @@ export default function LogAsNeededScreen() {
   };
 
   const combinedList = useMemo(() => {
-    const filteredSuggestions = COMMON_MEDICATIONS.filter(
+    const baseSuggestions = [...COMMON_MEDICATIONS, ...learnedSuggestions];
+    const filteredSuggestions = baseSuggestions.filter(
       suggestion => !medications.some(
         userMed => userMed.name.toLowerCase() === suggestion.name.toLowerCase()
       )
     ).map(s => ({ ...s, isSuggestion: true }));
 
-    return [...medications, ...filteredSuggestions];
-  }, [medications]);
+    const uniqueList = Array.from(
+      new Map([...medications, ...filteredSuggestions].map(item => [item.name.toLowerCase(), item])).values()
+    );
+
+    return uniqueList;
+  }, [learnedSuggestions, medications]);
 
   const filteredList = combinedList.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())

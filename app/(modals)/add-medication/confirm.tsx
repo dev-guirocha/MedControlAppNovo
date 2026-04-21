@@ -40,14 +40,19 @@ export default function ConfirmMedicationScreen() {
       color: params.color as string,
     };
 
-    if (params.id) {
-      await updateMedication(params.id as string, medicationData);
-    } else {
-      await addMedication(medicationData);
-    }
+    try {
+      if (params.id) {
+        await updateMedication(params.id as string, medicationData);
+      } else {
+        await addMedication(medicationData);
+      }
 
-    setLoading(false);
-    router.replace('/(tabs)/home');
+      router.replace('/(tabs)/home');
+    } catch (error) {
+      console.error('Erro ao salvar medicamento:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCorrect = () => router.back();

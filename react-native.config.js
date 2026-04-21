@@ -7,4 +7,21 @@ module.exports = {
       packageName: 'dev.guirocha.MedControlApp',
     },
   },
+  dependencies: {
+    '@react-native-firebase/app': {
+      platforms: {
+        ios: null,
+      },
+    },
+    '@react-native-firebase/messaging': {
+      platforms: {
+        ios: null,
+      },
+    },
+    '@react-native-firebase/storage': {
+      platforms: {
+        ios: null,
+      },
+    },
+  },
 };

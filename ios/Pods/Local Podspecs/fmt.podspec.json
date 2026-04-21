@@ -1,6 +1,6 @@
 {
   "name": "fmt",
-  "version": "9.1.0",
+  "version": "11.0.2",
   "license": {
     "type": "MIT"
   },
@@ -9,13 +9,14 @@
   "authors": "The fmt contributors",
   "source": {
     "git": "https://github.com/fmtlib/fmt.git",
-    "tag": "9.1.0"
+    "tag": "11.0.2"
   },
   "pod_target_xcconfig": {
-    "CLANG_CXX_LANGUAGE_STANDARD": "c++20"
+    "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
+    "GCC_WARN_INHIBIT_ALL_WARNINGS": "YES"
   },
   "platforms": {
-    "ios": "13.4"
+    "ios": "15.1"
   },
   "libraries": "c++",
   "public_header_files": "include/fmt/*.h",

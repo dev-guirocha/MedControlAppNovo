@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 12.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -20,7 +20,11 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EAS_PROJECT_ROOT_INSTALL_COMMAND": "npm install"
+        "EAS_PROJECT_ROOT_INSTALL_COMMAND": "npm install",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
@@ -33,7 +37,8 @@
         "buildType": "app-bundle"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       }
     }
   },

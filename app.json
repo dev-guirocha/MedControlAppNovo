@@ -2,8 +2,9 @@
   "expo": {
     "name": "MedControlApp",
     "slug": "MedControlApp",
-    "version": "1.0.0",
-    "jsEngine": "jsc",
+    "version": "2.0.1",
+    "newArchEnabled": true,
+    "icon": "./assets/images/icon.png",
     "experiments": {
       "typedRoutes": true
     },
@@ -12,13 +13,22 @@
         "origin": false
       },
       "eas": {
-        "projectId": "d156348d-dcd9-4a79-9dfb-eeb96b425192"
+        "projectId": "38605ef3-b224-4a56-a4e4-0f9b40eb60dd"
       }
     },
     "scheme": "myapp",
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/d156348d-dcd9-4a79-9dfb-eeb96b425192"
-    }
+      "url": "https://u.expo.dev/38605ef3-b224-4a56-a4e4-0f9b40eb60dd"
+    },
+    "android": {
+      "package": "dev.guirocha.MedControlApp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.dev-guirocha.MedControlApp-br",
+      "buildNumber": "10",
+      "icon": "./assets/images/icon.png"
+    },
+    "owner": "dev.guirocha"
   }
 }

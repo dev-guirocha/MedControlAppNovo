@@ -14,6 +14,7 @@ export default function NameScreen() {
   const [name, setName] = useState(userProfile?.name || '');
   const [photoUri, setPhotoUri] = useState<string | undefined>(userProfile?.photoUrl);
   const [loading, setLoading] = useState(false);
+  const [loadingPhoto, setLoadingPhoto] = useState(false);
 
   const handleContinue = async () => {
     if (!name.trim()) return;
@@ -24,20 +25,29 @@ export default function NameScreen() {
   };
 
   const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permissão Necessária', 'Você precisa permitir o acesso à galeria para escolher uma foto.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
+    setLoadingPhoto(true);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permissao Necessaria', 'Voce precisa permitir o acesso a galeria para escolher uma foto.');
+        return;
+      }
 
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: Platform.OS === 'ios',
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar foto no onboarding:', error);
+      Alert.alert('Erro', 'Nao foi possivel abrir a galeria.');
+    } finally {
+      setLoadingPhoto(false);
     }
   };
 
@@ -46,7 +56,7 @@ export default function NameScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <View style={styles.content}>
           <Text style={styles.title}>Como podemos te chamar?</Text>
-          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage} disabled={loadingPhoto}>
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={styles.avatarImage} />
             ) : (
@@ -54,7 +64,9 @@ export default function NameScreen() {
                 <Camera size={48} color={colors.primary} />
               </View>
             )}
-            <Text style={styles.avatarText}>Toque para adicionar uma foto (opcional)</Text>
+            <Text style={styles.avatarText}>
+              {loadingPhoto ? 'Abrindo galeria...' : 'Toque para adicionar uma foto (opcional)'}
+            </Text>
           </TouchableOpacity>
           <TextInput 
             style={styles.input} 

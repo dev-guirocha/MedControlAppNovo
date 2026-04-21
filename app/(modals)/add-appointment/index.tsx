@@ -30,25 +30,31 @@ export default function AddAppointmentForm() {
   });
 
   const [showPicker, setShowPicker] = useState(false);
-  const [loadingCamera, setLoadingCamera] = useState(false);
+  const [loadingRecipeImage, setLoadingRecipeImage] = useState(false);
 
-  const handleTakePicture = useCallback(async () => {
-    setLoadingCamera(true);
+  const handlePickRecipeImage = useCallback(async () => {
+    setLoadingRecipeImage(true);
     try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permissão Negada', 'Você precisa permitir o acesso à câmera para tirar fotos.');
+        Alert.alert('Permissao Negada', 'Voce precisa permitir o acesso a galeria para anexar a receita.');
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: Platform.OS === 'ios',
+        quality: 0.8,
+      });
+
       if (!result.canceled && result.assets.length > 0) {
         setFormData(prev => ({ ...prev, recipeImageUrl: result.assets[0].uri }));
       }
     } catch (error) {
-      console.error("Erro ao abrir a câmera: ", error);
-      Alert.alert('Erro', 'Não foi possível abrir a câmera.');
+      console.error('Erro ao abrir a galeria da receita:', error);
+      Alert.alert('Erro', 'Nao foi possivel abrir a galeria.');
     } finally {
-      setLoadingCamera(false);
+      setLoadingRecipeImage(false);
     }
   }, []);
 
@@ -143,10 +149,10 @@ export default function AddAppointmentForm() {
       <View style={styles.footer}>
         <Button 
           title={formData.recipeImageUrl ? "Alterar Receita" : "Anexar Receita"} 
-          onPress={handleTakePicture} 
+          onPress={handlePickRecipeImage} 
           variant="secondary" 
-          loading={loadingCamera} 
-          iconName="Camera" 
+          loading={loadingRecipeImage} 
+          iconName="Image" 
           style={styles.footerButton}
         />
         <Button 
@@ -180,8 +186,8 @@ const styles = StyleSheet.create({
   input: { borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, color: colors.text, backgroundColor: colors.cardBackground, minHeight: 56 },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   dateInput: { justifyContent: 'center' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  modalContent: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.lg, paddingBottom: 40 },
+  modalBackdrop: { flex: 1, backgroundColor: colors.overlay },
+  modalContent: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.cardBackground, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.lg, paddingBottom: 40, borderTopWidth: 1, borderColor: colors.border },
   imageContainer: { alignItems: 'center' },
   image: { width: '100%', height: 200, borderRadius: 12, resizeMode: 'cover' },
   noRecipeContainer: {

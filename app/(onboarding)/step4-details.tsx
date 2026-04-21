@@ -44,7 +44,7 @@ export default function DetailsScreen() {
               onPress={() => setGender(item.key as any)}
             >
               <Text style={[styles.optionText, gender === item.key && styles.optionTextSelected]}>{item.label}</Text>
-              {gender === item.key && <Check size={16} color={colors.background} />}
+              {gender === item.key && <Check size={16} color={colors.textInverse} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionTextSelected: {
-    color: colors.background,
+    color: colors.textInverse,
   },
   skipText: {
     color: colors.textSecondary,

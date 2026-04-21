@@ -8,7 +8,6 @@ export default function AddAppointmentLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.primary,
-        headerBackTitleVisible: false,
         headerTitleStyle: { color: colors.text },
         // ✅ Aplica uma cor de fundo ao contêiner do modal para uma transição suave
         contentStyle: { backgroundColor: colors.background },

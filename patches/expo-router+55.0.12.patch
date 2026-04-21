@@ -1,0 +1,100 @@
+diff --git a/node_modules/expo-router/ios/ExpoRouter.podspec b/node_modules/expo-router/ios/ExpoRouter.podspec
+index 24a4494..c829c94 100644
+--- a/node_modules/expo-router/ios/ExpoRouter.podspec
++++ b/node_modules/expo-router/ios/ExpoRouter.podspec
+@@ -26,13 +26,16 @@ Pod::Spec.new do |s|
+ 
+   s.dependency 'ExpoModulesCore'
+ 
++  # React Native's add_dependency helper expects pod_target_xcconfig to exist.
++  s.pod_target_xcconfig = {}
+   add_dependency(s, "RNScreens")
+ 
+   # Swift/Objective-C compatibility
+-  s.pod_target_xcconfig = {
++  existing_pod_target_xcconfig = s.to_hash['pod_target_xcconfig'] || {}
++  s.pod_target_xcconfig = existing_pod_target_xcconfig.merge({
+     'DEFINES_MODULE' => 'YES',
+     'SWIFT_COMPILATION_MODE' => 'wholemodule',
+     'OTHER_SWIFT_FLAGS' => "$(inherited) #{compiler_flags}",
+-  }
++  })
+ 
+   s.exclude_files = 'Tests/**/*'
+ 
+diff --git a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeNavigation.swift b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeNavigation.swift
+--- a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeNavigation.swift
++++ b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeNavigation.swift
+@@ -98,9 +98,7 @@ internal class LinkPreviewNativeNavigation {
+   private func setPreloadedView(
+     stackView: RNSScreenStackView, screenId: String
+   ) {
+-    let screenViews = stackView.reactSubviews()
+-    if let screenView = screenViews?.first(where: {
+-      ($0 as? RNSScreenView)?.screenId == screenId
+-    }) as? RNSScreenView {
++    let screenViews = stackView.reactSubviews()
++    if let screenView = findScreenView(in: screenViews, screenId: screenId) {
+       preloadedScreenView = screenView
+       preloadedStackView = stackView
+     }
+@@ -113,10 +111,9 @@ internal class LinkPreviewNativeNavigation {
+   private func findStackViewWithScreenIdInSubViews(
+     screenId: String?, tabKeys: [String], rootView: UIView
+   ) -> RNSScreenStackView? {
+-    if let rootView = rootView as? RNSScreenStackView,
+-      let screenId {
+-      if rootView.screenIds.contains(screenId) {
+-        return rootView
++    if let rootView = rootView as? RNSScreenStackView {
++      if screenId == nil || findScreenView(in: rootView.reactSubviews(), screenId: screenId) != nil {
++        return rootView
+       }
+     } else if let tabBarController = getTabBarControllerFromTabView(view: rootView) {
+       if let (tabIndex, tabView) = getIndexAndViewOfFirstTabWithKey(
+@@ -172,11 +169,9 @@ internal class LinkPreviewNativeNavigation {
+   ) -> UIView? {
+     var currentResponder: UIResponder? = responder
+ 
+-    while let nextResponder = currentResponder?.next {
+-      if let view = nextResponder as? RNSScreenStackView,
+-        let screenId {
+-        if view.screenIds.contains(screenId) {
+-          return view
++    while let nextResponder = currentResponder?.next {
++      if let view = nextResponder as? RNSScreenStackView {
++        if screenId == nil || findScreenView(in: view.reactSubviews(), screenId: screenId) != nil {
++          return view
+         }
+       } else if let nextView = nextResponder as? UIView,
+         let tabKey = RNScreensTabCompat.tabKey(from: nextView),
+@@ -185,4 +180,15 @@ internal class LinkPreviewNativeNavigation {
+     }
+     return nil
+   }
++
++  private func findScreenView(in screenViews: [UIView]?, screenId: String?) -> RNSScreenView? {
++    let screenViews = screenViews?.compactMap { $0 as? RNSScreenView } ?? []
++
++    guard !screenViews.isEmpty else {
++      return nil
++    }
++
++    // Older react-native-screens versions do not expose screen identifiers.
++    // Fall back to the top screen in the matched stack so LinkPreview remains functional.
++    return screenViews.last
++  }
+ }
+diff --git a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeView.swift b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeView.swift
+--- a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeView.swift
++++ b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeView.swift
+@@ -1,8 +1,8 @@
+ import ExpoModulesCore
+ import RNScreens
+ 
+ class NativeLinkPreviewView: RouterViewWithLogger, UIContextMenuInteractionDelegate,
+-  RNSDismissibleModalProtocol, LinkPreviewMenuUpdatable {
++  LinkPreviewMenuUpdatable {
+   private var preview: NativeLinkPreviewContentView?
+   private var interaction: UIContextMenuInteraction?
+   var directChild: UIView?

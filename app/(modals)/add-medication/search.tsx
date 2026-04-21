@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { COMMON_MEDICATIONS } from '@/constants/commonMedications';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
+import { useMedicationSuggestionsStore } from '@/hooks/useMedicationSuggestionsStore';
 import { Text } from '@/components/StyledText';
 import { Search, X, CornerDownLeft } from 'lucide-react-native';
 
@@ -17,15 +18,21 @@ export default function SearchMedicationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { medications: userMedications } = useMedicationStore();
+  const { suggestions: learnedSuggestions } = useMedicationSuggestionsStore();
   const [searchQuery, setSearchQuery] = useState('');
   const fontSize = getFontSize('medium');
 
   const allSuggestions = useMemo<Suggestion[]>(() => {
     const userMedsFormatted: Suggestion[] = userMedications.map(med => ({ name: med.name, dosage: med.dosage }));
-    const combined: Suggestion[] = [...COMMON_MEDICATIONS.map(item => ({ ...item, isSuggestion: true })), ...userMedsFormatted];
+    const learnedSuggestionsFormatted: Suggestion[] = learnedSuggestions.map(item => ({ ...item, isSuggestion: true }));
+    const combined: Suggestion[] = [
+      ...COMMON_MEDICATIONS.map(item => ({ ...item, isSuggestion: true })),
+      ...learnedSuggestionsFormatted,
+      ...userMedsFormatted,
+    ];
     const uniqueSuggestions = Array.from(new Map(combined.map(item => [item.name.toLowerCase(), item])).values());
     return uniqueSuggestions.sort((a, b) => a.name.localeCompare(b.name));
-  }, [userMedications]);
+  }, [learnedSuggestions, userMedications]);
 
   const filteredList = useMemo(() => {
     if (!searchQuery) return allSuggestions;
@@ -126,19 +133,24 @@ const styles = StyleSheet.create({
   suggestionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   suggestionText: { fontWeight: '600', color: colors.text },
   suggestionDosage: { color: colors.textSecondary, marginTop: 2 },
-  suggestionBadge: { backgroundColor: colors.primaryFaded, borderRadius: 12, paddingHorizontal: spacing.sm, paddingVertical: 2 },
-  suggestionBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
+  suggestionBadge: {
+    backgroundColor: '#D7E9FF',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  suggestionBadgeText: { color: '#143A63', fontSize: 12, fontWeight: '700' },
   addNewItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    backgroundColor: colors.primaryFaded,
+    backgroundColor: '#D7E9FF',
     borderRadius: 8,
     marginTop: spacing.md,
   },
   addNewText: {
     marginLeft: spacing.sm,
-    color: colors.primary,
+    color: '#143A63',
     fontSize: 16,
   },
   emptyState: {

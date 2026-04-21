@@ -56,7 +56,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
-        <Pill size={24} color={'white'} />
+        <Pill size={24} color={colors.textInverse} />
       </View>
       <View style={styles.detailsContainer}>
         <Text style={dynamicStyles.medicationName}>{medication.name}</Text>
@@ -127,8 +127,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   missedDoseCard: {
-    // ✅ ALTERADO: Mantém o fundo padrão do card
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.surfaceMuted,
     borderColor: colors.danger,
     borderWidth: 2,
   },

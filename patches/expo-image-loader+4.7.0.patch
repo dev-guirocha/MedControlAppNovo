@@ -1,0 +1,32 @@
+diff --git a/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.h b/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.h
+index 52ea396..4b89dc7 100644
+--- a/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.h
++++ b/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.h
+@@ -5,6 +5,6 @@
+ #import <React/RCTBridgeModule.h>
+ #import <UIKit/UIKit.h>
+ 
+-@interface EXImageLoader : NSObject <RCTBridgeModule, EXInternalModule, EXImageLoaderInterface>
++@interface EXLegacyImageLoader : NSObject <RCTBridgeModule, EXInternalModule, EXImageLoaderInterface>
+ 
+ @end
+diff --git a/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.m b/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.m
+index 75bb73c..b21f110 100644
+--- a/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.m
++++ b/node_modules/expo-image-loader/ios/EXImageLoader/EXImageLoader.m
+@@ -4,13 +4,13 @@
+ #import <React/RCTImageLoaderProtocol.h>
+ #import <ExpoModulesCore/EXUtilities.h>
+ 
+-@interface EXImageLoader ()
++@interface EXLegacyImageLoader ()
+ 
+ @property (weak, nonatomic) RCTBridge *bridge;
+ 
+ @end
+ 
+-@implementation EXImageLoader
++@implementation EXLegacyImageLoader
+ 
+ EX_REGISTER_MODULE();
+ 

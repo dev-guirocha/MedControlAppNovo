@@ -38,9 +38,7 @@
         "ios/React/CameraBridge.h"
       ],
       "dependencies": {
-        "React-Core": [
-
-        ]
+        "React-Core": []
       }
     }
   ]

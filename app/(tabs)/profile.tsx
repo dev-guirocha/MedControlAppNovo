@@ -1,13 +1,13 @@
 // MedControlAppNovo/app/(tabs)/profile.tsx
 
 import React from 'react';
-import { View, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue, Image } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
-import { FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote } from 'lucide-react-native';
+import { FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote, Stethoscope } from 'lucide-react-native';
 import { Text } from '@/components/StyledText';
 
 // --- Componentes Reutilizáveis para a Lista ---
@@ -33,10 +33,12 @@ const SettingsItem: React.FC<SettingsItemProps> = ({ icon: Icon, text, onPress }
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { userProfile, saveUserProfile } = useAuthStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const userInitial = userProfile?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
+  const floatingTabBarOffset = Math.max(insets.bottom, 12) + 64 + spacing.lg;
 
   const handleLogout = () => {
     Alert.alert('Sair da Conta', 'Tem certeza que deseja sair?',
@@ -69,7 +71,11 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Cabeçalho do Perfil */}
       <View style={styles.profileHeader}>
-        <View style={styles.avatar}><Text style={styles.avatarInitial}>{userInitial}</Text></View>
+        {userProfile.photoUrl ? (
+          <Image source={{ uri: userProfile.photoUrl }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}><Text style={styles.avatarInitial}>{userInitial}</Text></View>
+        )}
         <View style={styles.profileInfo}>
           <Text style={dynamicStyles.userName}>{userProfile.name}</Text>
           <Text style={dynamicStyles.userType}>{userProfile.type === 'patient' ? 'Paciente' : 'Cuidador(a)'}</Text>
@@ -79,11 +85,16 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: spacing.lg }}
+      >
         <View style={styles.section}>
             <Text style={dynamicStyles.sectionTitle}>CONTA</Text>
             <View style={styles.card}>
                 <SettingsItem text="Questionário de Anamnese" icon={FileText} onPress={() => router.push('/(modals)/anamnesis')} />
+                <View style={styles.divider} />
+                <SettingsItem text="Consultas" icon={Stethoscope} onPress={() => router.push('/(tabs)/consultas')} />
             </View>
         </View>
         
@@ -109,7 +120,7 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: floatingTabBarOffset }]}>
         <Button title="Sair da Conta" variant="danger" onPress={handleLogout} />
       </View>
     </SafeAreaView>
@@ -129,6 +140,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   avatar: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.primaryFaded, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  avatarImage: { width: 70, height: 70, borderRadius: 35, marginRight: spacing.md },
   avatarInitial: { fontSize: 28, fontWeight: '700', color: colors.primary },
   profileInfo: { flex: 1 },
   editButton: { padding: spacing.sm },

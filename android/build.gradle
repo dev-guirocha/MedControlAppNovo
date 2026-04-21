@@ -3,12 +3,13 @@
 buildscript {
     ext {
         buildToolsVersion = findProperty('android.buildToolsVersion') ?: '34.0.0'
-        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '23')
+        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
         compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '34')
         targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
-        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.23'
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '2.1.20'
+        kspVersion = findProperty('android.kspVersion') ?: '2.1.20-2.0.1'
 
-        ndkVersion = "26.1.10909125"
+        ndkVersion = findProperty('android.ndkVersion') ?: "27.1.12297006"
     }
     repositories {
         google()
@@ -23,7 +24,55 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+subprojects { subproject ->
+    def configureAndroidNdk = {
+        def androidExtension = subproject.extensions.findByName("android")
+        if (androidExtension != null && androidExtension.hasProperty("ndkVersion")) {
+            androidExtension.ndkVersion = rootProject.ext.ndkVersion
+        }
+    }
+
+    subproject.pluginManager.withPlugin("com.android.application") {
+        configureAndroidNdk()
+    }
+    subproject.pluginManager.withPlugin("com.android.library") {
+        configureAndroidNdk()
+    }
+}
+
 allprojects {
+    configurations.configureEach {
+        resolutionStrategy.force(
+            'androidx.browser:browser:1.8.0',
+            'androidx.compose.animation:animation-android:1.9.3',
+            'androidx.compose.animation:animation-core-android:1.9.3',
+            'androidx.compose.foundation:foundation-android:1.9.3',
+            'androidx.compose.foundation:foundation-layout-android:1.9.3',
+            'androidx.compose.material:material-ripple-android:1.9.3',
+            'androidx.compose.runtime:runtime-saveable-android:1.9.3',
+            'androidx.compose.ui:ui-android:1.9.3',
+            'androidx.compose.ui:ui-graphics-android:1.9.3',
+            'androidx.compose.ui:ui-text-android:1.9.3',
+            'androidx.compose.ui:ui-tooling-android:1.9.3',
+            'androidx.compose.ui:ui-tooling-data-android:1.9.3',
+            'androidx.core:core:1.13.1',
+            'androidx.core:core-ktx:1.13.1',
+            'androidx.core:core-splashscreen:1.0.1',
+            'androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7',
+            'androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7',
+            'androidx.navigation:navigation-compose-android:2.9.4',
+            'org.jetbrains.kotlin:kotlin-stdlib:2.1.20',
+            'org.jetbrains.kotlin:kotlin-stdlib-common:2.1.20',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.20',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.20',
+            'org.jetbrains.kotlin:kotlin-reflect:2.1.20',
+            'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2',
+            'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2',
+            'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2',
+            'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2',
+            'org.jetbrains.kotlinx:kotlinx-datetime:0.6.1'
+        )
+    }
     repositories {
         maven {
             // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm

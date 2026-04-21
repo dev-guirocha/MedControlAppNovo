@@ -104,33 +104,48 @@ export default function MedicationFormScreen() {
         return ['08:00'];
     };
 
-    const initialId = toStringParam(params.id);
-    const initialSelectedName = toStringParam(params.selectedName);
-    const [formData, setFormData] = useState<MedicationFormState>({
-        id: initialId || undefined,
-        name: initialSelectedName || toStringParam(params.name),
-        dosage: toStringParam(params.selectedDosage) || toStringParam(params.dosage),
-        color: toStringParam(params.color, medicationColors[0]),
-        form: (toStringParam(params.form, 'comprimido') as Medication['form']),
-        frequency: (toStringParam(params.frequency, 'diária') as Medication['frequency']),
-        times: toTimesParam(params.times),
-        stock: toStringParam(params.stock),
-        stockAlertThreshold: toStringParam(params.stockAlertThreshold),
-        instructions: toStringParam(params.instructions),
-        doctor: toStringParam(params.doctor),
-        condition: toStringParam(params.condition),
+    const buildFormStateFromParams = (): MedicationFormState => {
+        const initialId = toStringParam(params.id);
+        const initialSelectedName = toStringParam(params.selectedName);
+
+        return {
+            id: initialId || undefined,
+            name: initialSelectedName || toStringParam(params.name),
+            dosage: toStringParam(params.selectedDosage) || toStringParam(params.dosage),
+            color: toStringParam(params.color, medicationColors[0]),
+            form: (toStringParam(params.form, 'comprimido') as Medication['form']),
+            frequency: (toStringParam(params.frequency, 'diária') as Medication['frequency']),
+            times: toTimesParam(params.times),
+            stock: toStringParam(params.stock),
+            stockAlertThreshold: toStringParam(params.stockAlertThreshold),
+            instructions: toStringParam(params.instructions),
+            doctor: toStringParam(params.doctor),
+            condition: toStringParam(params.condition),
+        };
+    };
+
+    const formStateSignature = JSON.stringify({
+        id: params.id,
+        name: params.name,
+        selectedName: params.selectedName,
+        dosage: params.dosage,
+        selectedDosage: params.selectedDosage,
+        color: params.color,
+        form: params.form,
+        frequency: params.frequency,
+        times: params.times,
+        stock: params.stock,
+        stockAlertThreshold: params.stockAlertThreshold,
+        instructions: params.instructions,
+        doctor: params.doctor,
+        condition: params.condition,
     });
 
+    const [formData, setFormData] = useState<MedicationFormState>(() => buildFormStateFromParams());
+
     useEffect(() => {
-        const selectedName = toStringParam(params.selectedName);
-        if (selectedName) {
-            setFormData((prev) => ({
-                ...prev,
-                name: selectedName,
-                dosage: toStringParam(params.selectedDosage),
-            }));
-        }
-    }, [params.selectedName, params.selectedDosage]);
+        setFormData(buildFormStateFromParams());
+    }, [formStateSignature]);
 
     const isEditing = !!params.id;
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -202,7 +217,13 @@ export default function MedicationFormScreen() {
     };
     const handleAddTime = () => setFormData((prev) => ({ ...prev, times: [...prev.times, '12:00'] }));
     const setTimePreset = (times: string[]) => setFormData((prev) => ({ ...prev, times: [...times] }));
-    const handleNext = () => router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...formData, times: formData.times } as any });
+    const handleNext = () => {
+        const normalizedFormData = {
+            ...formData,
+            id: formData.id || undefined,
+        };
+        router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...normalizedFormData, times: formData.times } as any });
+    };
     const isValid = !!(formData.name.trim() && formData.dosage.trim() && formData.stock.trim() && formData.stockAlertThreshold.trim());
 
     return (
@@ -221,7 +242,7 @@ export default function MedicationFormScreen() {
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Para que é este medicamento? (Opcional)</Text>
                         <TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.condition} onChangeText={(text) => setFormData(prev => ({ ...prev, condition: text }))} placeholder="Ex: Dor de cabeça, Hipertensão"/>
                     </View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Cor de Identificação</Text><View style={styles.colorSelectorContainer}>{medicationColors.map(color => (<TouchableOpacity key={color} style={[styles.colorOption, { backgroundColor: color }]} onPress={() => handleSelectColor(color)}>{formData.color === color && <Check size={24} color="white" />}</TouchableOpacity>))}</View></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Cor de Identificação</Text><View style={styles.colorSelectorContainer}>{medicationColors.map(color => (<TouchableOpacity key={color} style={[styles.colorOption, { backgroundColor: color }]} onPress={() => handleSelectColor(color)}>{formData.color === color && <Check size={24} color={colors.textInverse} />}</TouchableOpacity>))}</View></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Médico(a) (Opcional)</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.doctor} onChangeText={(text) => setFormData(prev => ({ ...prev, doctor: text }))} placeholder="Ex: Dr. Carlos Andrade"/></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Forma *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Forma', FORMS, handleSelectForm)}><Text style={{fontSize: fontSize.lg}}>{formData.form}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Frequência *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Frequência', FREQUENCIES, handleSelectFrequency)}><Text style={{fontSize: fontSize.lg}}>{formData.frequency}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
@@ -326,10 +347,10 @@ const styles = StyleSheet.create({
     presetText: { color: colors.primary, marginTop: spacing.xs },
     colorSelectorContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'space-between', marginTop: spacing.sm },
     colorOption: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-    modalContent: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.lg, paddingBottom: 40 },
+    modalBackdrop: { flex: 1, backgroundColor: colors.overlay },
+    modalContent: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.cardBackground, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.lg, paddingBottom: 40, borderTopWidth: 1, borderColor: colors.border },
     pickerModalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-    pickerModalContent: { backgroundColor: colors.background, borderRadius: 16, width: '100%', padding: spacing.lg, maxHeight: '60%', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
+    pickerModalContent: { backgroundColor: colors.cardBackground, borderRadius: 16, width: '100%', padding: spacing.lg, maxHeight: '60%', shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5, borderWidth: 1, borderColor: colors.border },
     pickerModalTitle: { fontWeight: 'bold', color: colors.text, marginBottom: spacing.lg, textAlign: 'center' },
     pickerModalOption: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
     pickerModalOptionText: { color: colors.primary, textAlign: 'center' },

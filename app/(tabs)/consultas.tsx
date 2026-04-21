@@ -8,7 +8,7 @@ import { useAppointmentStore } from '@/hooks/useAppointmentStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Appointment } from '@/types/medication';
 import { Text } from '@/components/StyledText';
-import { Plus, Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
+import { Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
 
 // Card da Consulta (sem lógica de arrastar)
 const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appointment; onEdit: (item: Appointment) => void; onViewRecipe: (recipeUri: string) => void; }) => {
@@ -62,7 +62,7 @@ const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appo
                 style={styles.recipeButton}
                 onPress={() => onViewRecipe(item.recipeImageUrl!)}
               >
-                <Receipt size={18} color={colors.primary} />
+                <Receipt size={18} color="#143A63" />
                 <Text style={styles.recipeButtonText}>Ver Receita</Text>
               </TouchableOpacity>
             </View>
@@ -85,7 +85,7 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete, onViewRecipe }: { it
         return (
             <Animated.View style={{ width: 80, transform: [{ translateX: trans }] }}>
                 <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePress}>
-                    <Trash2 size={24} color="white" />
+                    <Trash2 size={24} color={colors.textInverse} />
                     <DefaultText style={styles.deleteButtonText}>Excluir</DefaultText>
                 </TouchableOpacity>
             </Animated.View>
@@ -112,8 +112,6 @@ export default function ConsultasScreen() {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const [selectedRecipeUri, setSelectedRecipeUri] = useState<string | null>(null);
-
-  const handleAddAppointment = useCallback(() => router.push('/(modals)/add-appointment'), [router]);
 
   const handleEdit = useCallback((appointment: Appointment) => {
     router.push({ pathname: '/(modals)/add-appointment', params: { ...appointment, date: new Date(appointment.date).toISOString() } });
@@ -151,11 +149,8 @@ export default function ConsultasScreen() {
             <View style={styles.emptyState}>
               <Stethoscope size={64} color={colors.disabled}/>
               <Text style={[styles.emptyTitle, {fontSize: fontSize.xl}]}>Nenhuma consulta agendada</Text>
-              <Text style={[styles.emptySubtitle, {fontSize: fontSize.md}]}>Toque no botão '+' para adicionar sua primeira consulta.</Text>
+              <Text style={[styles.emptySubtitle, {fontSize: fontSize.md}]}>Use o botão '+' do menu para adicionar sua primeira consulta.</Text>
             </View>
-             <TouchableOpacity style={styles.fab} onPress={handleAddAppointment} accessibilityLabel="Adicionar nova consulta">
-                <Plus color="white" size={32} />
-            </TouchableOpacity>
         </SafeAreaView>
     );
   }
@@ -180,9 +175,6 @@ export default function ConsultasScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
       />
-      <TouchableOpacity style={styles.fab} onPress={handleAddAppointment} accessibilityLabel="Adicionar nova consulta">
-        <Plus color="white" size={32} />
-      </TouchableOpacity>
 
       <Modal
         visible={!!selectedRecipeUri}
@@ -213,7 +205,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { color: colors.textSecondary, textAlign: 'center' },
   sectionHeader: { fontWeight: 'bold', color: colors.primary, backgroundColor: colors.background, paddingTop: spacing.md, paddingBottom: spacing.sm },
   card: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
-  pastCard: { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' },
+  pastCard: { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
   pastText: { color: colors.textSecondary },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.md },
   headerTextContainer: { flex: 1, marginHorizontal: spacing.md },
@@ -226,15 +218,23 @@ const styles = StyleSheet.create({
   cardText: { color: colors.text, flexShrink: 1 },
   notes: { color: colors.textSecondary, fontStyle: 'italic', marginTop: spacing.sm },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md },
-  recipeButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryFaded, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 8, alignSelf: 'flex-start' },
-  recipeButtonText: { color: colors.primary, fontWeight: '600' },
-  fab: { position: 'absolute', right: 16, bottom: 16, width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  recipeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#D7E9FF',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  recipeButtonText: { color: '#143A63', fontWeight: '700' },
   deleteButton: { backgroundColor: colors.danger, flex: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 16 },
-  deleteButtonText: { color: 'white', marginTop: spacing.xs, fontWeight: '600', fontSize: 12 },
-  recipeModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg },
+  deleteButtonText: { color: colors.textInverse, marginTop: spacing.xs, fontWeight: '600', fontSize: 12 },
+  recipeModalContainer: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },
   recipeModalBackdrop: { ...StyleSheet.absoluteFillObject },
-  recipeModalContent: { backgroundColor: colors.background, borderRadius: 16, padding: spacing.lg, alignItems: 'center' },
+  recipeModalContent: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   recipePreviewImage: { width: '100%', height: 320, marginBottom: spacing.lg },
   recipeModalCloseButton: { backgroundColor: colors.primary, paddingVertical: spacing.sm, paddingHorizontal: spacing.xl, borderRadius: 999 },
-  recipeModalCloseButtonText: { color: colors.background, fontWeight: '600' },
+  recipeModalCloseButtonText: { color: colors.textInverse, fontWeight: '600' },
 });

@@ -1,28 +1,28 @@
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import * as Notifications from 'expo-notifications';
 import React, { useEffect, useMemo, useRef } from "react";
+import type { NotificationResponse } from 'expo-notifications';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootSiblingParent } from 'react-native-root-siblings';
 import { useAppLoadingStore } from "@/hooks/useAppLoadingStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useMedicationStore } from "@/hooks/useMedicationStore";
+import { useMedicationSuggestionsStore } from "@/hooks/useMedicationSuggestionsStore";
 import { useDoseHistoryStore } from "@/hooks/useDoseHistoryStore";
 import { useAppointmentStore } from "@/hooks/useAppointmentStore";
 import { useAnamnesisStore } from "@/hooks/useAnamnesisStore";
-import { setupNotificationCategories } from "@/lib/notifications";
+import { getMedicationActionFromNotificationResponse, initializeNotificationsAsync } from "@/lib/notifications";
 import { colors } from '@/constants/theme';
 import { StatusBar } from 'expo-status-bar';
-
-SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{
       headerStyle: { backgroundColor: colors.background },
       headerTintColor: colors.text,
-      headerBackTitleVisible: false,
+      headerTitleStyle: { color: colors.text },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: colors.background },
     }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
@@ -44,78 +44,86 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const { loadMedications, logDose } = useMedicationStore();
+  const { loadMedications } = useMedicationStore();
+  const { loadSuggestions } = useMedicationSuggestionsStore();
   const { loadUserProfile } = useAuthStore();
   const { loadHistory } = useDoseHistoryStore();
   const { loadAppointments } = useAppointmentStore();
   const { loadAnamnesis } = useAnamnesisStore();
-  const { isLoading, stopLoading } = useAppLoadingStore();
+  const { stopLoading } = useAppLoadingStore();
+  const handledNotificationResponsesRef = useRef(new Set<string>());
 
   useEffect(() => {
     const initializeApp = async () => {
+      let responseSubscription: { remove: () => void } | null = null;
+
+      const handleNotificationResponse = async (response: NotificationResponse) => {
+        const responseKey = `${response.notification.request.identifier}:${response.actionIdentifier}`;
+        if (handledNotificationResponsesRef.current.has(responseKey)) {
+          return;
+        }
+
+        handledNotificationResponsesRef.current.add(responseKey);
+
+        const medicationAction = getMedicationActionFromNotificationResponse(response);
+        if (!medicationAction) {
+          return;
+        }
+
+        try {
+          await useMedicationStore.getState().logDose(
+            medicationAction.medicationId,
+            medicationAction.scheduledDate,
+            medicationAction.status
+          );
+        } catch (error) {
+          console.error('Error handling medication notification action:', error);
+        }
+      };
+
       try {
+        await initializeNotificationsAsync();
+        const Notifications = await import('expo-notifications');
+
         await Promise.all([
           loadMedications(),
+          loadSuggestions(),
           loadHistory(),
           loadUserProfile(),
           loadAppointments(),
           loadAnamnesis(),
-          setupNotificationCategories(),
         ]);
+
+        responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+          void handleNotificationResponse(response);
+        });
+
+        const lastResponse = await Notifications.getLastNotificationResponseAsync();
+        if (lastResponse) {
+          await handleNotificationResponse(lastResponse);
+          await Notifications.clearLastNotificationResponseAsync();
+        }
       } catch (error) {
         console.error('Error initializing app:', error);
       } finally {
         stopLoading();
       }
+
+      return () => {
+        responseSubscription?.remove();
+      };
     };
-    initializeApp();
+
+    let cleanup: (() => void) | undefined;
+
+    void initializeApp().then((maybeCleanup) => {
+      cleanup = maybeCleanup;
+    });
+
+    return () => {
+      cleanup?.();
+    };
   }, []);
-
-  const handledResponsesRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const handleNotificationResponse = async (response: Notifications.NotificationResponse | null) => {
-      if (!response) return;
-
-      const { actionIdentifier, notification } = response;
-      if (actionIdentifier !== 'dose-taken' && actionIdentifier !== 'dose-skipped') {
-        return;
-      }
-
-      const data = notification.request.content.data || {};
-      const medicationId = typeof data.medicationId === 'string' ? data.medicationId : undefined;
-      if (!medicationId) {
-        return;
-      }
-
-      const responseKey = `${notification.request.identifier}:${actionIdentifier}:${notification.date ?? '0'}`;
-      if (handledResponsesRef.current.has(responseKey)) {
-        return;
-      }
-      handledResponsesRef.current.add(responseKey);
-
-      const scheduledTimestamp = typeof data.scheduledTimestamp === 'string' ? new Date(data.scheduledTimestamp) : undefined;
-      const triggerDate = notification.date ? new Date(notification.date) : undefined;
-      const scheduledTime = [scheduledTimestamp, triggerDate, new Date()].find((date) => date && !Number.isNaN(date.getTime()))!;
-
-      try {
-        await logDose(medicationId, scheduledTime, actionIdentifier === 'dose-taken' ? 'taken' : 'skipped');
-      } catch (error) {
-        console.error('Error handling notification response:', error);
-      }
-    };
-
-    Notifications.getLastNotificationResponseAsync().then(handleNotificationResponse);
-    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-    return () => subscription.remove();
-  }, [logDose]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoading]);
-
   const statusBarStyle = useMemo<'light' | 'dark'>(() => {
     const hex = (colors.background ?? '#FFFFFF').replace('#', '').padEnd(6, 'f');
     const r = parseInt(hex.slice(0, 2), 16) || 0;

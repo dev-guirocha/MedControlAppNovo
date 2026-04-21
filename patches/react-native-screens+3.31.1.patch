@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-screens/RNScreens.podspec b/node_modules/react-native-screens/RNScreens.podspec
+index 67b85c8..6e65241 100644
+--- a/node_modules/react-native-screens/RNScreens.podspec
++++ b/node_modules/react-native-screens/RNScreens.podspec
+@@ -56,6 +56,7 @@ Pod::Spec.new do |s|
+   s.platforms    = { :ios => platform, :tvos => "11.0", :visionos => "1.0" }
+   s.source       = { :git => "https://github.com/software-mansion/react-native-screens.git", :tag => "#{s.version}" }
+   s.source_files = source_files
++  s.private_header_files = "cpp/**/*.h"
+   s.requires_arc = true
+ 
+   if defined?(install_modules_dependencies()) != nil

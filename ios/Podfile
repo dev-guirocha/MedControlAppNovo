@@ -1,10 +1,12 @@
+require 'logger'
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 require 'json'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
-ENV['RCT_NEW_ARCH_ENABLED'] = podfile_properties['newArchEnabled'] == 'true' ? '1' : '0'
+new_arch_enabled = podfile_properties['newArchEnabled']
+ENV['RCT_NEW_ARCH_ENABLED'] = new_arch_enabled == 'false' ? '0' : '1'
 ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] = podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
 
 use_autolinking_method_symbol = ('use' + '_native' + '_modules!').to_sym
@@ -35,7 +37,12 @@ install! 'cocoapods',
 prepare_react_native_project!
 
 target 'MedControlApp' do
-  use_expo_modules!
+  # Expo 55 is resolving expo-modules-core inside expo/node_modules in this project.
+  # Register it explicitly so other Expo pods can depend on it during spec resolution.
+  pod 'ExpoModulesCore', :path => '../node_modules/expo/node_modules/expo-modules-core'
+  pod 'ExpoModulesJSI', :path => '../node_modules/expo/node_modules/expo-modules-core'
+
+  use_expo_modules!(exclude: ['expo-updates'])
   config = use_native_modules!
 
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
@@ -50,6 +57,8 @@ target 'MedControlApp' do
   )
 
   post_install do |installer|
+    min_ios_version = podfile_properties['ios.deploymentTarget'] || '13.4'
+
     react_native_post_install(
       installer,
       config[:reactNativePath],
@@ -64,6 +73,7 @@ target 'MedControlApp' do
       target_installation_result.resource_bundle_targets.each do |resource_bundle_target|
         resource_bundle_target.build_configurations.each do |config|
           config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version
         end
       end
     end
@@ -71,6 +81,22 @@ target 'MedControlApp' do
     # Ensure Release builds produce dSYM files for all pods (including Hermes)
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version
+        config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+
+        react_common_header_path = '"$(PODS_ROOT)/../../node_modules/react-native/ReactCommon"'
+        header_search_paths = config.build_settings['HEADER_SEARCH_PATHS']
+
+        if header_search_paths.is_a?(Array)
+          config.build_settings['HEADER_SEARCH_PATHS'] = (header_search_paths + [react_common_header_path]).uniq
+        elsif header_search_paths.is_a?(String)
+          unless header_search_paths.include?(react_common_header_path)
+            config.build_settings['HEADER_SEARCH_PATHS'] = "#{header_search_paths} #{react_common_header_path}"
+          end
+        else
+          config.build_settings['HEADER_SEARCH_PATHS'] = ['$(inherited)', react_common_header_path]
+        end
+
         # Force dSYM generation for Release builds
         if config.name == 'Release'
           config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
@@ -94,6 +120,27 @@ target 'MedControlApp' do
 
         config.build_settings['FRAMEWORK_SEARCH_PATHS'] = filtered_paths.uniq
       end
+    end
+
+    installer.aggregate_targets.each do |aggregate_target|
+      user_project = aggregate_target.user_project
+      next unless user_project
+
+      user_project.targets.each do |target|
+        target.build_configurations.each do |config|
+          config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        end
+
+        next unless target.name == 'MedControlApp'
+
+        target.shell_script_build_phases.each do |phase|
+          next unless phase.name == '[CP-User] [RNFB] Core Configuration'
+
+          phase.always_out_of_date = '1'
+        end
+      end
+
+      user_project.save
     end
   end
 

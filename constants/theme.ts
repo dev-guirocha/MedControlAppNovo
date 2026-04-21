@@ -1,17 +1,4 @@
-export const colors = {
-  primary: '#2D6A9F',
-  primaryFaded: '#EAF1F8',
-  background: '#FFFFFF',
-  cardBackground: '#F7F9FC',
-  text: '#1A1A1A',
-  textSecondary: '#6B7280',
-  border: '#E5E7EB',
-  disabled: '#D1D5DB',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  gray: '#808080',
-};
+export { colors } from './colors';
 
 export const medicationColors = [ '#2D6A9F', '#EF4444', '#F59E0B', '#10B981', '#6366F1', '#8B5CF6', '#EC4899' ];
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };

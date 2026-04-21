@@ -41,7 +41,7 @@ export function SwipeableMedicationCard({ medication, onPress, isNextDose, onDel
             onDelete(medication.id);
           }}
         >
-          <Trash2 size={24} color="white" />
+          <Trash2 size={24} color={colors.textInverse} />
         </TouchableOpacity>
       </Animated.View>
     );

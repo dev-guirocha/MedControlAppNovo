@@ -10,7 +10,7 @@ import { CheckCircle2 } from 'lucide-react-native';
 const ChecklistItem = ({ text, done }: { text: string; done: boolean }) => (
   <View style={styles.checklistItem}>
     <View style={[styles.checklistIcon, done && styles.checklistIconDone]}>
-      <CheckCircle2 size={20} color={done ? colors.background : colors.textSecondary} />
+      <CheckCircle2 size={20} color={done ? colors.textInverse : colors.textSecondary} />
     </View>
     <Text style={[styles.checklistText, done && styles.checklistTextDone]}>{text}</Text>
   </View>

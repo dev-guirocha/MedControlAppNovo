@@ -4,14 +4,18 @@ import React from 'react';
 
 export default function EditProfileLayout() {
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { color: colors.text },
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen 
         name="index" 
         options={{ 
           title: 'Editar Perfil',
-          headerBackTitleVisible: false,
-          headerTitleStyle: { color: colors.text },
-          headerTintColor: colors.primary,
           headerShown: true,
         }} 
       />

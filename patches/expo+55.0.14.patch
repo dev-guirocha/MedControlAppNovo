@@ -1,0 +1,308 @@
+diff --git a/node_modules/expo/Expo.podspec b/node_modules/expo/Expo.podspec
+index ae6b508..3a1e4f2 100644
+--- a/node_modules/expo/Expo.podspec
++++ b/node_modules/expo/Expo.podspec
+@@ -14,6 +14,7 @@ begin
+ end
+ 
+ reactNativeTargetVersion = reactNativeVersion.split('.')[1].to_i
++has_react_app_dependency_provider = !Dir.glob(File.join(absolute_react_native_path, '**', 'ReactAppDependencyProvider.podspec{,.json}')).empty?
+ 
+ compiler_flags = get_folly_config()[:compiler_flags]
+ 
+@@ -100,7 +101,9 @@ Pod::Spec.new do |s|
+ 
+   s.dependency 'React-RCTAppDelegate'
+   s.dependency 'React-RCTFabric'
+-  s.dependency 'ReactAppDependencyProvider'
++  if has_react_app_dependency_provider
++    s.dependency 'ReactAppDependencyProvider'
++  end
+ 
+   install_modules_dependencies(s)
+ 
+@@ -110,7 +113,20 @@ Pod::Spec.new do |s|
+ 
+   s.source_files = 'ios/**/*.{h,m,mm,swift}'
+-  s.exclude_files = 'ios/Tests'
++  excluded_files = ['ios/Tests']
++
++  if reactNativeTargetVersion < 79
++    excluded_files.concat([
++      'ios/AppDelegates/EXReactRootViewFactory.h',
++      'ios/AppDelegates/EXReactRootViewFactory.mm',
++      'ios/AppDelegates/ExpoReactNativeFactory.h',
++      'ios/AppDelegates/ExpoReactNativeFactory.mm',
++      'ios/AppDelegates/ExpoReactNativeFactory.swift',
++      'ios/AppDelegates/ExpoReactNativeFactoryDelegate.swift',
++    ])
++  end
++
++  s.exclude_files = excluded_files
+   s.compiler_flags = compiler_flags
+   s.private_header_files = ['ios/**/Swift.h']
+
+diff --git a/node_modules/expo/ios/Expo.h b/node_modules/expo/ios/Expo.h
+--- a/node_modules/expo/ios/Expo.h
++++ b/node_modules/expo/ios/Expo.h
+@@ -1,4 +1,6 @@
+ #import <ExpoModulesCore/ExpoModulesCore.h>
+ #import <Expo/EXAppDefinesLoader.h>
++#if REACT_NATIVE_TARGET_VERSION >= 79
+ #import <Expo/ExpoReactNativeFactory.h>
++#endif
+ #import <Expo/RCTAppDelegateUmbrella.h>
+
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ExpoModulesJSI.podspec b/node_modules/expo/node_modules/expo-modules-core/ExpoModulesJSI.podspec
+index 841311b..21d0204 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ExpoModulesJSI.podspec
++++ b/node_modules/expo/node_modules/expo-modules-core/ExpoModulesJSI.podspec
+@@ -78,6 +78,7 @@ Pod::Spec.new do |s|
+       'USE_HEADERMAP' => 'YES',
+       'DEFINES_MODULE' => 'YES',
+       'HEADER_SEARCH_PATHS' => header_search_paths.join(' '),
++      'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
+     }
+   end
+ 
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JS/EXJSIInstaller.mm b/node_modules/expo/node_modules/expo-modules-core/ios/JS/EXJSIInstaller.mm
+index ff46073..2f49be9 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JS/EXJSIInstaller.mm
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JS/EXJSIInstaller.mm
+@@ -45,6 +45,10 @@ jsi::Runtime *jsiRuntime = reinterpret_cast<jsi::Runtime *>(bridge.runtime);
+     return nil;
+   }
+ 
++  if ([bridge respondsToSelector:@selector(jsCallInvoker)]) {
++    return [[EXRuntime alloc] initWithRuntime:*jsiRuntime callInvoker:bridge.jsCallInvoker];
++  }
++
+   return [[EXRuntime alloc] initWithRuntime:*jsiRuntime];
+ }
+ 
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIConversions.mm b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIConversions.mm
+index 3e860ae..9602749 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIConversions.mm
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIConversions.mm
+@@ -28,13 +28,12 @@ jsi::Value convertNSNumberToJSINumber(jsi::Runtime &runtime, NSNumber *value)
+ 
+ jsi::String convertNSStringToJSIString(jsi::Runtime &runtime, NSString *value)
+ {
+-  const uint8_t *utf8 = (const uint8_t *)[value UTF8String];
+-  const size_t length = [value length];
++  NSData *utf8Data = [value dataUsingEncoding:NSUTF8StringEncoding];
++  const uint8_t *utf8 = (const uint8_t *)utf8Data.bytes;
++  const size_t length = utf8Data.length;
+ 
+   if (utf8 != nullptr && expo::isAllASCIIAndNotNull(utf8, utf8 + length)) {
+     return jsi::String::createFromAscii(runtime, (const char *)utf8, length);
+   }
+-  // Using cStringUsingEncoding should be fine as long as we provide the length.
+-  return jsi::String::createFromUtf16(runtime, (const char16_t *)[value cStringUsingEncoding:NSUTF16StringEncoding], length);
++  return jsi::String::createFromUtf8(runtime, utf8, length);
+ }
+ 
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIUtils.mm b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIUtils.mm
+index 2e16cf2..647ab95 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIUtils.mm
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJSIUtils.mm
+@@ -128,9 +128,5 @@ jsi::Value makeCodedError(jsi::Runtime &runtime, NSString *code, NSString *messa
+ #pragma mark - RuntimeScheduler
+ 
+ std::shared_ptr<react::RuntimeScheduler> runtimeSchedulerFromRuntime(jsi::Runtime &runtime) {
+-  if (auto binding = react::RuntimeSchedulerBinding::getBinding(runtime)) {
+-    return binding->getRuntimeScheduler();
+-  }
+   return nullptr;
+ }
+ 
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.h b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.h
+index 7430178..679d9c8 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.h
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.h
+@@ -8,7 +8,11 @@ typedef void (^RCTPromiseResolveBlock)(id result);
+ typedef void (^RCTPromiseRejectBlock)(NSString *code, NSString *message, NSError *error);
+ #else
+ #import <React/RCTBridgeModule.h>
++#if __has_include(<React/RCTCallInvoker.h>)
+ #import <React/RCTCallInvoker.h>
++#else
++#import <ReactCommon/CallInvoker.h>
++#endif
+ #endif
+ 
+ #import <Foundation/Foundation.h>
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.mm b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.mm
+index d9d4bd7..ec6b47c 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.mm
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/EXJavaScriptRuntime.mm
+@@ -7,7 +7,19 @@
+ #import <ExpoModulesJSI/JSIUtils.h>
+ 
+ #import <jsi/jsi.h>
++#if __has_include(<hermes/hermes.h>)
+ #import <hermes/hermes.h>
++#endif
++#if __has_include(<jsc/JSCRuntime.h>)
++#import <jsc/JSCRuntime.h>
++#define EXPO_HAS_JSC_RUNTIME 1
++#elif __has_include(<ReactCommon/jsc/JSCRuntime.h>)
++#import <ReactCommon/jsc/JSCRuntime.h>
++#define EXPO_HAS_JSC_RUNTIME 1
++#else
++#define EXPO_HAS_JSC_RUNTIME 0
++#endif
+ #import <ReactCommon/SchedulerPriority.h>
+ 
+ @implementation EXJavaScriptRuntime {
+@@ -42,7 +54,9 @@
+         })
+     );
+-#else
+-    _runtime = jsc::makeJSCRuntime();
++#elif EXPO_HAS_JSC_RUNTIME
++    _runtime = facebook::jsc::makeJSCRuntime();
++#else
++    _runtime = nullptr;
+ #endif
+     _jsCallInvoker = std::make_shared<expo::TestingJSCallInvoker>(_runtime);
+   }
+@@ -52,13 +66,13 @@
+     // See explanation for constructor (8): https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr
+     _runtime = std::shared_ptr<jsi::Runtime>(std::shared_ptr<jsi::Runtime>(), &runtime);
+     _runtimeScheduler = expo::runtimeSchedulerFromRuntime(runtime);
+-    _jsCallInvoker = std::make_shared<RuntimeSchedulerCallInvoker>(_runtimeScheduler);
++    _jsCallInvoker = _runtimeScheduler ? std::make_shared<RuntimeSchedulerCallInvoker>(_runtimeScheduler) : nullptr;
+   }
+   return self;
+ }
+ 
+-- (nonnull instancetype)initWithRuntime:(jsi::Runtime &)runtime callInvoker:(std::shared_ptr<react::RuntimeSchedulerCallInvoker>)callInvoker {
++- (nonnull instancetype)initWithRuntime:(jsi::Runtime &)runtime callInvoker:(std::shared_ptr<react::CallInvoker>)callInvoker {
+   if (self = [super init]) {
+     _runtime = std::shared_ptr<jsi::Runtime>(std::shared_ptr<jsi::Runtime>(), &runtime);
+     _runtimeScheduler = nullptr;
+@@ -204,7 +218,11 @@
+     _runtimeScheduler->scheduleTask(schedulerPriority, std::move(callback));
+     return;
+   }
+-  _jsCallInvoker->invokeAsync(SchedulerPriority(priority), [block = std::move(block)](jsi::Runtime&) {
++  if (!_jsCallInvoker) {
++    block();
++    return;
++  }
++  _jsCallInvoker->invokeAsync(SchedulerPriority(priority), [block = std::move(block)]() {
+     block();
+   });
+ }
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/TestUtils/TestingJSCallInvoker.h b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/TestUtils/TestingJSCallInvoker.h
+index 718e9bc..aab9c58 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/JSI/TestUtils/TestingJSCallInvoker.h
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/JSI/TestUtils/TestingJSCallInvoker.h
+@@ -26,14 +26,20 @@ public:
+   void invokeAsync(react::CallFunc &&func) noexcept override {
+     auto weakRuntime = runtime;
+     std::function<void()> mainThreadFunc = [weakRuntime, func]() {
+-      auto strongRuntime = weakRuntime.lock();
+-      func(*strongRuntime);
++      if (!weakRuntime.lock()) {
++        return;
++      }
++      func();
+     };
+     MainThreadInvoker::invokeOnMainThread(mainThreadFunc);
+   }
+ 
+  void invokeSync(react::CallFunc &&func) override {
+-    func(*runtime.lock());
++    if (!runtime.lock()) {
++      return;
++    }
++    func();
+   }
+ 
+   ~TestingJSCallInvoker() override = default;
+diff --git a/node_modules/expo/node_modules/expo-modules-core/ios/Fabric/ExpoFabricViewObjC.mm b/node_modules/expo/node_modules/expo-modules-core/ios/Fabric/ExpoFabricViewObjC.mm
+index 7865c0b..16beffb 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/ios/Fabric/ExpoFabricViewObjC.mm
++++ b/node_modules/expo/node_modules/expo-modules-core/ios/Fabric/ExpoFabricViewObjC.mm
+@@ -105,10 +105,10 @@ static std::unordered_map<std::string, ExpoViewComponentDescriptor::Flavor> _com
+     flavor = _componentFlavorsCache[className] = std::make_shared<std::string const>(className);
+   }
+ 
+-  ComponentName componentName = ComponentName { flavor->c_str() };
+-  ComponentHandle componentHandle = reinterpret_cast<ComponentHandle>(componentName);
++  react::ComponentName componentName = flavor->c_str();
++  react::ComponentHandle componentHandle = reinterpret_cast<react::ComponentHandle>(componentName);
+ 
+-  return ComponentDescriptorProvider {
++  return react::ComponentDescriptorProvider {
+     componentHandle,
+     componentName,
+     flavor,
+@@ -150,18 +150,18 @@ static std::unordered_map<std::string, ExpoViewComponentDescriptor::Flavor> _com
+ {
+   // Implemented in `ExpoFabricView.swift`
+ }
+ 
+- (void)updateState:(State::Shared const &)state oldState:(State::Shared const &)oldState
++- (void)updateState:(react::State::Shared const &)state oldState:(react::State::Shared const &)oldState
+ {
+-  _state = std::static_pointer_cast<const ExpoViewShadowNode::ConcreteState>(state);
++  _state = std::static_pointer_cast<const expo::ExpoViewShadowNode::ConcreteState>(state);
+ }
+ 
+ - (void)viewDidUpdateProps
+ {
+   // Implemented in `ExpoFabricView.swift`
+ }
+ 
+ - (void)setShadowNodeSize:(float)width height:(float)height
+ {
+   if (_state) {
+ #if REACT_NATIVE_TARGET_VERSION >= 82
+-    _state->updateState(ExpoViewState(width,height), EventQueue::UpdateMode::unstable_Immediate);
++    _state->updateState(expo::ExpoViewState(width, height), EventQueue::UpdateMode::unstable_Immediate);
+ #else
+-    _state->updateState(ExpoViewState(width,height));
++    _state->updateState(expo::ExpoViewState(width, height));
+ #endif
+   }
+ }
+diff --git a/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/BridgelessJSCallInvoker.h b/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/BridgelessJSCallInvoker.h
+index d979f4a..8964b17 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/BridgelessJSCallInvoker.h
++++ b/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/BridgelessJSCallInvoker.h
+@@ -16,7 +16,7 @@ public:
+   explicit BridgelessJSCallInvoker(react::RuntimeExecutor runtimeExecutor) : runtimeExecutor_(std::move(runtimeExecutor)) {}
+ 
+   void invokeAsync(react::CallFunc &&func) noexcept override {
+-    runtimeExecutor_([func = std::move(func)](jsi::Runtime &runtime) { func(runtime); });
++    runtimeExecutor_([func = std::move(func)](jsi::Runtime &runtime) { func(); });
+   }
+ 
+   void invokeSync(react::CallFunc &&func) override {
+diff --git a/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/TestingSyncJSCallInvoker.h b/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/TestingSyncJSCallInvoker.h
+index d8a78dd..935a5e7 100644
+--- a/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/TestingSyncJSCallInvoker.h
++++ b/node_modules/expo/node_modules/expo-modules-core/common/cpp/JSI/TestingSyncJSCallInvoker.h
+@@ -21,11 +21,17 @@ public:
+   explicit TestingSyncJSCallInvoker(const std::shared_ptr<jsi::Runtime>& runtime) : runtime(runtime) {}
+ 
+   void invokeAsync(react::CallFunc &&func) noexcept override {
+-    func(*runtime.lock());
++    if (!runtime.lock()) {
++      return;
++    }
++    func();
+   }
+ 
+   void invokeSync(react::CallFunc &&func) override {
+-    func(*runtime.lock());
++    if (!runtime.lock()) {
++      return;
++    }
++    func();
+   }
+ 
+   ~TestingSyncJSCallInvoker() override = default;

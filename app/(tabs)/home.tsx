@@ -1,12 +1,11 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDoseSchedule } from '@/hooks/medication-store';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { MedicationCard } from '@/components/MedicationCard';
-import { Plus } from 'lucide-react-native';
 import { Text as StyledText } from '@/components/StyledText';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAppLoadingStore } from '@/hooks/useAppLoadingStore';
@@ -148,15 +147,6 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 16 + (Platform.OS === 'ios' ? insets.bottom : 0) }]}
-        onPress={() => router.push('/(modals)/add-medication')}
-        accessibilityLabel="Adicionar medicamento"
-        accessibilityRole="button"
-      >
-        <Plus color="white" size={32} />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -196,20 +186,4 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: colors.success },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyStateSection: { alignItems: 'center', paddingVertical: spacing.xxl },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
 });

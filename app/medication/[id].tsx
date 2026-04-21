@@ -56,7 +56,7 @@ export default function MedicationDetailScreen() {
     infoRow: { flexDirection: 'row', alignItems:'center', gap: spacing.sm, marginBottom: spacing.md },
     label: { color: colors.textSecondary, minWidth: 80 },
     value: { color: colors.text, fontWeight: '500' as const, flex: 1 },
-    instructionsContainer: { marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.background, borderRadius: 8 },
+    instructionsContainer: { marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: 8 },
     instructions: { color: colors.text, marginTop: spacing.xs, lineHeight: 22 },
     stockHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
     stockInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -66,22 +66,19 @@ export default function MedicationDetailScreen() {
     cardTitle: { fontWeight: '600' as const, color: colors.text, marginBottom: spacing.md },
     doseButtons: { gap: spacing.md },
     managementButtons: { flexDirection: 'row', gap: spacing.md },
-    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.overlay },
     modalBackdrop: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 },
     modalCardWrapper: { width: '100%', paddingHorizontal: spacing.lg },
-    modalCard: { backgroundColor: colors.background, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+    modalCard: { backgroundColor: colors.cardBackground, borderRadius: 16, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
     modalTitle: { fontWeight: '600' as const, color: colors.text, fontSize: fontSize.lg },
     modalMessage: { color: colors.textSecondary, marginTop: spacing.sm, fontSize: fontSize.sm },
     modalInput: { marginTop: spacing.lg, borderWidth: 2, borderColor: colors.border, borderRadius: 12, padding: spacing.md, color: colors.text, backgroundColor: colors.cardBackground, fontSize: fontSize.lg },
     modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   }), [fontSize]);
 
-  if (!medication) {
-    return (<SafeAreaView style={styles.container}><Text style={styles.errorText}>Medicamento não encontrado</Text></SafeAreaView>);
-  }
-
   // ✅ Funções para registrar dose com o horário agendado correto
   const handleTakeDose = async () => {
+    if (!medication) return;
     const scheduledDate = getScheduledDateForLog();
     setLoading(true);
     try {
@@ -90,7 +87,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.success,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
       router.back();
     } catch (error) {
@@ -99,7 +96,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.danger,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
     } finally {
       setLoading(false);
@@ -107,6 +104,7 @@ export default function MedicationDetailScreen() {
   };
 
   const handleSkipDose = async () => {
+    if (!medication) return;
     const scheduledDate = getScheduledDateForLog();
     try {
       await logDose(medication.id, scheduledDate, 'skipped');
@@ -114,7 +112,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.warning,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
       router.back();
     } catch (error) {
@@ -123,7 +121,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.danger,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
     }
   };
@@ -139,6 +137,10 @@ export default function MedicationDetailScreen() {
   }, []);
 
   const handleConfirmStock = useCallback(async () => {
+    if (!medication) {
+      return;
+    }
+
     const amount = parseInt(stockAmount, 10);
     if (Number.isNaN(amount) || amount <= 0) {
       Alert.alert('Valor inválido', 'Informe um número maior que zero.');
@@ -152,7 +154,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.success,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
       closeStockModal();
     } catch (error) {
@@ -161,7 +163,7 @@ export default function MedicationDetailScreen() {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: colors.danger,
-        textColor: colors.background,
+        textColor: colors.textInverse,
       });
     } finally {
       setIsUpdatingStock(false);
@@ -169,11 +171,13 @@ export default function MedicationDetailScreen() {
   }, [stockAmount, medication, updateMedication, closeStockModal]);
   
   const handleEdit = () => {
+    if (!medication) return;
     const paramsToSend = { ...medication, times: medication.times || [] };
     router.push({ pathname: '/(modals)/add-medication/form', params: paramsToSend });
   };
 
   const handleDelete = () => {
+    if (!medication) return;
     Alert.alert('Excluir Medicamento', 'Tem certeza?',
       [{ text: 'Cancelar', style: 'cancel' }, {
           text: 'Excluir', style: 'destructive',
@@ -186,8 +190,12 @@ export default function MedicationDetailScreen() {
     );
   };
 
-  const lowStock = medication.stock <= medication.stockAlertThreshold;
-  const isAsNeeded = medication.frequency === 'quando necessário';
+  const lowStock = medication ? medication.stock <= medication.stockAlertThreshold : false;
+  const isAsNeeded = medication?.frequency === 'quando necessário';
+
+  if (!medication) {
+    return (<SafeAreaView style={styles.container}><Text style={styles.errorText}>Medicamento não encontrado</Text></SafeAreaView>);
+  }
 
   return (
     <>

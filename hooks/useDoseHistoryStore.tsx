@@ -9,6 +9,7 @@ interface DoseHistoryState {
   loadHistory: () => Promise<void>;
   // ✅ logDose agora apenas recebe a entrada pronta para salvar.
   addDoseEntry: (doseEntry: DoseHistory) => Promise<void>;
+  removeEntriesByMedicationId: (medicationId: string) => Promise<void>;
 }
 
 export const useDoseHistoryStore = create<DoseHistoryState>((set, get) => ({
@@ -48,6 +49,16 @@ export const useDoseHistoryStore = create<DoseHistoryState>((set, get) => ({
     } catch (error) {
       console.error('Error adding dose entry:', error);
       showErrorToast('Erro ao registrar a dose no histórico.'); // ✅ 2. Adicionar feedback de erro
+    }
+  },
+  removeEntriesByMedicationId: async (medicationId: string) => {
+    try {
+      const updatedHistory = get().doseHistory.filter((entry) => entry.medicationId !== medicationId);
+      set({ doseHistory: updatedHistory });
+      await AsyncStorage.setItem(DOSE_HISTORY_KEY, JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error removing medication history:', error);
+      showErrorToast('Erro ao limpar o histórico do medicamento.');
     }
   },
 }));

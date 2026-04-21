@@ -45,7 +45,7 @@ export function Button({
     size === 'large' && styles.largeText,
   ];
 
-  const iconColor = isSecondary ? colors.primary : colors.background;
+  const iconColor = isSecondary ? colors.text : isSuccess ? colors.background : colors.textInverse;
 
   return (
     <Pressable
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   primaryButton: { backgroundColor: colors.primary },
-  secondaryButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.text },
+  secondaryButton: { backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
   successButton: { backgroundColor: colors.success },
   dangerButton: { backgroundColor: colors.danger },
   disabledButton: { opacity: 0.6 },
@@ -104,10 +104,10 @@ const styles = StyleSheet.create({
   textBase: { fontSize: 16, fontWeight: '600' },
   smallText: { fontSize: 14 },
   largeText: { fontSize: 18 },
-  primaryText: { color: colors.background },
+  primaryText: { color: colors.textInverse },
   secondaryText: { color: colors.text },
   successText: { color: colors.background },
-  dangerText: { color: colors.background },
+  dangerText: { color: colors.textInverse },
   disabledText: { color: colors.textSecondary },
   icon: { marginRight: 8 },
 });

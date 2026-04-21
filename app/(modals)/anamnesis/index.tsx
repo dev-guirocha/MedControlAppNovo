@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { useAnamnesisStore } from '@/hooks/useAnamnesisStore';
@@ -13,7 +13,7 @@ import { Plus } from 'lucide-react-native';
 const CheckboxItem = ({ label, value, onValueChange }: { label: string, value: boolean, onValueChange: (value: boolean) => void }) => (
   <View style={styles.checkboxContainer}>
     <Text style={styles.checkboxLabel}>{label}</Text>
-    <Switch value={value} onValueChange={onValueChange} trackColor={{ false: colors.border, true: colors.primary }} thumbColor={value ? colors.background : colors.border} />
+    <Switch value={value} onValueChange={onValueChange} trackColor={{ false: colors.border, true: colors.primary }} thumbColor={value ? colors.textInverse : colors.border} />
   </View>
 );
 
@@ -76,8 +76,8 @@ export default function AnamnesisScreen() {
 
   const dynamicStyles = StyleSheet.create({
     title: { fontSize: fontSize.xxxl, fontWeight: 'bold', color: colors.text, marginBottom: spacing.sm },
-    sectionTitle: { fontSize: fontSize.xl, fontWeight: '600', color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
-    label: { fontWeight: '500', color: colors.text, marginBottom: spacing.sm },
+    sectionTitle: { fontSize: fontSize.xxl, fontWeight: '700', color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
+    label: { fontSize: fontSize.lg, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
     input: { fontSize: fontSize.lg },
     placeholderText: { fontSize: fontSize.md, color: colors.textSecondary },
     textArea: { minHeight: 100, textAlignVertical: 'top' },
@@ -85,7 +85,12 @@ export default function AnamnesisScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.content}>
           <Text style={dynamicStyles.title}>Questionário de Anamnese</Text>
           <Text style={styles.subtitle}>Preencha seus dados médicos para mantê-los salvos e acessíveis.</Text>
@@ -101,6 +106,7 @@ export default function AnamnesisScreen() {
                 value={condition}
                 onChangeText={(text) => handleArrayChange('chronicConditions', index, text)}
                 placeholder={index === 0 ? 'Ex: Hipertensão (diagnóstico em 2015)' : 'Adicionar outra condição'}
+                placeholderTextColor={colors.textSecondary}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('chronicConditions')} style={styles.addButton}>
@@ -118,6 +124,7 @@ export default function AnamnesisScreen() {
                 value={allergy}
                 onChangeText={(text) => handleArrayChange('allergies', index, text)}
                 placeholder={index === 0 ? 'Ex: Dipirona (reação em 2010)' : 'Adicionar outra alergia'}
+                placeholderTextColor={colors.textSecondary}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('allergies')} style={styles.addButton}>
@@ -136,6 +143,7 @@ export default function AnamnesisScreen() {
                 value={surgery}
                 onChangeText={(text) => handleArrayChange('surgeries', index, text)}
                 placeholder={index === 0 ? 'Ex: Apendicectomia (2020)' : 'Adicionar outra cirurgia'}
+                placeholderTextColor={colors.textSecondary}
               />
             ))}
             <TouchableOpacity onPress={() => handleAddToArray('surgeries')} style={styles.addButton}>
@@ -171,6 +179,7 @@ export default function AnamnesisScreen() {
               value={formData.familyHistory.other}
               onChangeText={(text) => setFormData(prev => ({ ...prev, familyHistory: { ...prev.familyHistory, other: text } }))}
               placeholder="Outras condições familiares"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
 
@@ -182,15 +191,20 @@ export default function AnamnesisScreen() {
               value={formData.otherNotes}
               onChangeText={(text) => setFormData(prev => ({ ...prev, otherNotes: text }))}
               placeholder="Ex: Tive COVID-19 em 2023."
+              placeholderTextColor={colors.textSecondary}
               multiline
             />
           </View>
         </View>
       </KeyboardAwareScrollView>
       
-      <View style={[styles.footer, styles.footerWithExport]}>
-        <Button title="Salvar" onPress={handleSave} size="large" variant="success" loading={loading} style={styles.saveButton} />
-        <Button title="Exportar" onPress={handleExport} size="large" variant="secondary" loading={isExporting} />
+      <View style={styles.footer}>
+        <View style={styles.footerButton}>
+          <Button title="Salvar" onPress={handleSave} size="large" variant="success" loading={loading} />
+        </View>
+        <View style={styles.footerButton}>
+          <Button title="Exportar" onPress={handleExport} size="large" variant="secondary" loading={isExporting} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -198,10 +212,11 @@ export default function AnamnesisScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { backgroundColor: colors.background },
   content: { padding: spacing.xl, paddingBottom: spacing.xxl },
   footer: { flexDirection: 'row', padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md },
-  footerWithExport: { justifyContent: 'space-between' },
-  saveButton: { flex: 1 },
+  footerButton: { flex: 1 },
   subtitle: { color: colors.textSecondary, marginBottom: spacing.lg, fontSize: 16, lineHeight: 24 },
   helperText: { color: colors.textSecondary, marginBottom: spacing.sm, fontSize: 13 },
   inputGroup: { marginBottom: spacing.lg },

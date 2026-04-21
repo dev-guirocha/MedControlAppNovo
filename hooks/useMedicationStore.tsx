@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { scheduleMedicationNotifications, cancelMedicationNotifications, scheduleStockNotification } from '@/lib/notifications';
+import { scheduleMedicationNotifications, cancelMedicationNotifications, scheduleStockNotification, cleanupOrphanedMedicationNotifications } from '@/lib/notifications';
 import { Medication, DoseHistory } from '@/types/medication';
 import { useDoseHistoryStore } from './useDoseHistoryStore';
+import { useMedicationSuggestionsStore } from './useMedicationSuggestionsStore';
 import { MEDS_KEY } from '../src/constants/keys';
 import { showErrorToast } from '@/lib/toastHelper';
 import * as Crypto from 'expo-crypto';
@@ -22,7 +23,19 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   loadMedications: async () => {
     try {
       const storedMeds = await AsyncStorage.getItem(MEDS_KEY);
-      if (storedMeds) set({ medications: JSON.parse(storedMeds) });
+      const parsedMedications: Medication[] = storedMeds ? JSON.parse(storedMeds) : [];
+      set({ medications: parsedMedications });
+
+      try {
+        await cleanupOrphanedMedicationNotifications(parsedMedications);
+
+        for (const medication of parsedMedications) {
+          await scheduleMedicationNotifications(medication);
+          await scheduleStockNotification(medication);
+        }
+      } catch (notificationError) {
+        console.error('Error restoring medication notifications:', notificationError);
+      }
     } catch (error) {
       console.error('Error loading meds:', error);
     }
@@ -34,14 +47,28 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       const updatedMeds = [...get().medications, newMed];
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
-      await scheduleMedicationNotifications(newMed);
-      await scheduleStockNotification(newMed);
-      return newMed;
+      await useMedicationSuggestionsStore.getState().addSuggestion({
+        name: newMed.name,
+        dosage: newMed.dosage,
+      });
     } catch (error) {
       console.error('Error adding medication:', error);
       showErrorToast('Erro ao adicionar o medicamento.');
-      // No caso de erro, retornamos o objeto original sem ID para evitar que a UI quebre
-      return { ...data, id: '', createdAt: '' };
+      throw error;
+    }
+
+    try {
+      await scheduleMedicationNotifications(newMed, { requestPermissions: true });
+      await scheduleStockNotification(newMed, { requestPermissions: true });
+    } catch (notificationError) {
+      // The medication was already saved; notification failures should not surface as save failures.
+      console.error('Error scheduling medication notifications:', notificationError);
+    }
+
+    try {
+      return newMed;
+    } catch {
+      return newMed;
     }
   },
 
@@ -51,15 +78,21 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     try {
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
-      if (toUpdate) {
-        await scheduleMedicationNotifications(toUpdate);
-        if (updates.stock !== undefined) {
-          await scheduleStockNotification(toUpdate);
-        }
-      }
     } catch (error) {
       console.error('Error updating medication:', error);
       showErrorToast('Erro ao atualizar o medicamento.');
+      return;
+    }
+
+    if (toUpdate) {
+      try {
+        await scheduleMedicationNotifications(toUpdate, { requestPermissions: true });
+        if (updates.stock !== undefined) {
+          await scheduleStockNotification(toUpdate, { requestPermissions: true });
+        }
+      } catch (notificationError) {
+        console.error('Error updating medication notifications:', notificationError);
+      }
     }
   },
 
@@ -68,6 +101,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     try {
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+      await useDoseHistoryStore.getState().removeEntriesByMedicationId(id);
       await cancelMedicationNotifications(id);
     } catch (error) {
       console.error('Error deleting medication:', error);
@@ -91,6 +125,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     ).padStart(2, '0')}`;
     const timeKey = `${String(scheduledTime.getHours()).padStart(2, '0')}:${String(scheduledTime.getMinutes()).padStart(2, '0')}`;
     const doseId = `${medicationId}::${dayKey}::${timeKey}`;
+    const previousEntry = useDoseHistoryStore
+      .getState()
+      .doseHistory.find((entry) => entry.doseId === doseId);
 
     const newEntry: DoseHistory = {
       id: `${medicationId}-${scheduledTime.toISOString()}`,
@@ -103,15 +140,15 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     };
     await useDoseHistoryStore.getState().addDoseEntry(newEntry);
 
-    // Se a dose foi apenas pulada, não há necessidade de atualizar o medicamento
-    if (status === 'skipped') {
+    const stockDelta = getStockDelta(previousEntry?.status, status);
+    if (stockDelta === 0) {
       return;
     }
 
-    // 2. Se a dose foi tomada, calcular o novo estado do medicamento
+    // Reconciliar o estoque com base na transição real de status da dose.
     const updatedMed = {
       ...med,
-      stock: med.stock > 0 ? med.stock - 1 : 0,
+      stock: Math.max(0, med.stock + stockDelta),
     };
     const updatedMeds = [...medications];
     updatedMeds[medIndex] = updatedMed;
@@ -128,3 +165,19 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 }));
+
+function getStockDelta(previousStatus: DoseHistory['status'] | undefined, nextStatus: 'taken' | 'skipped') {
+  if (previousStatus === nextStatus) {
+    return 0;
+  }
+
+  if (previousStatus === 'taken' && nextStatus === 'skipped') {
+    return 1;
+  }
+
+  if ((previousStatus === undefined || previousStatus === 'pending' || previousStatus === 'skipped') && nextStatus === 'taken') {
+    return -1;
+  }
+
+  return 0;
+}
