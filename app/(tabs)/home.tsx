@@ -12,6 +12,7 @@ import { useAppLoadingStore } from '@/hooks/useAppLoadingStore';
 import { ScheduledDose } from '@/types/medication';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
+import { toDayKey } from '@/lib/schedule';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -29,11 +30,11 @@ export default function HomeScreen() {
   const upcomingDoses = schedule.filter(dose => !dose.isMissed);
   const nextDose = upcomingDoses[0] || null;
 
-  const todayKey = new Date().toISOString().split('T')[0];
+  const todayKey = toDayKey(new Date());
   const todayHistory = doseHistory.filter(item => {
     if (!item.scheduledTime) return false;
     const date = new Date(item.scheduledTime);
-    return !Number.isNaN(date.getTime()) && date.toISOString().split('T')[0] === todayKey;
+    return !Number.isNaN(date.getTime()) && toDayKey(date) === todayKey;
   });
   const takenToday = todayHistory.filter(item => item.status === 'taken').length;
   const skippedToday = todayHistory.filter(item => item.status === 'skipped').length;

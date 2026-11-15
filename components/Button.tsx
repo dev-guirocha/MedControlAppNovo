@@ -61,6 +61,7 @@ export function Button({
         ]}
         onPress={onPress}
         disabled={isDisabled}
+        accessibilityRole="button"
         accessibilityLabel={loading ? 'Carregando' : title}
         accessibilityState={{ disabled: isDisabled, busy: loading }}
         {...props}

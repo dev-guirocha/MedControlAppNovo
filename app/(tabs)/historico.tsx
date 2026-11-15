@@ -10,6 +10,7 @@ import type { Theme } from 'react-native-calendars/src/types';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
+import { toDayKey } from '@/lib/schedule';
 
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -54,7 +55,7 @@ export default function HistoryScreen() {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const tabBarSpace = useTabBarSpace();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(toDayKey(new Date()));
 
   const markedDates = useMemo(() => {
     const markings: { [key: string]: any } = {};
@@ -62,7 +63,7 @@ export default function HistoryScreen() {
 
     doseHistory.forEach(item => {
       if (item.scheduledTime && !isNaN(Date.parse(item.scheduledTime))) {
-        const date = new Date(item.scheduledTime).toISOString().split('T')[0];
+        const date = toDayKey(new Date(item.scheduledTime));
         if (!historyByDay[date]) historyByDay[date] = [];
         historyByDay[date].push(item);
       }
@@ -92,7 +93,7 @@ export default function HistoryScreen() {
 
   const selectedDayHistory = useMemo(() => {
       return doseHistory.filter(item => {
-          return item.scheduledTime && !isNaN(Date.parse(item.scheduledTime)) && new Date(item.scheduledTime).toISOString().split('T')[0] === selectedDate;
+          return item.scheduledTime && !isNaN(Date.parse(item.scheduledTime)) && toDayKey(new Date(item.scheduledTime)) === selectedDate;
       }).sort((a,b) => new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime());
   }, [doseHistory, selectedDate]);
   

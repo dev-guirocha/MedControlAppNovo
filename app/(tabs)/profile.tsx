@@ -1,6 +1,6 @@
 // MedControlAppNovo/app/(tabs)/profile.tsx
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ type SettingsItemProps = {
 };
 
 const SettingsItem: React.FC<SettingsItemProps> = ({ icon: Icon, text, onPress }) => (
-    <TouchableOpacity style={styles.itemContainer} onPress={onPress}>
+    <TouchableOpacity style={styles.itemContainer} onPress={onPress} accessibilityRole="button" accessibilityLabel={text}>
         <View style={styles.itemContent}>
             {Icon && <Icon size={22} color={colors.textSecondary} style={styles.itemIcon} />}
             <Text style={styles.itemText}>{text}</Text>
@@ -39,6 +39,8 @@ export default function ProfileScreen() {
   const fontSize = getFontSize(fontScale);
   const userInitial = userProfile?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
   const tabBarSpace = useTabBarSpace();
+  const [photoFailed, setPhotoFailed] = useState(false);
+  useEffect(() => setPhotoFailed(false), [userProfile?.photoUrl]);
 
   const handleLogout = () => {
     // Não existe conta: isto só reabre o cadastro inicial. Os dados ficam no aparelho.
@@ -72,8 +74,14 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={[]}>
       {/* Cabeçalho do Perfil */}
       <View style={styles.profileHeader}>
-        {userProfile.photoUrl ? (
-          <Image source={{ uri: userProfile.photoUrl }} style={styles.avatarImage} />
+        {/* A foto aponta para um arquivo temporário que o Android pode apagar: se falhar, mostra a inicial. */}
+        {userProfile.photoUrl && !photoFailed ? (
+          <Image
+            source={{ uri: userProfile.photoUrl }}
+            style={styles.avatarImage}
+            onError={() => setPhotoFailed(true)}
+            accessibilityLabel={`Foto de ${userProfile.name}`}
+          />
         ) : (
           <View style={styles.avatar}><Text style={styles.avatarInitial}>{userInitial}</Text></View>
         )}
@@ -81,7 +89,12 @@ export default function ProfileScreen() {
           <Text style={dynamicStyles.userName}>{userProfile.name}</Text>
           <Text style={dynamicStyles.userType}>{userProfile.type === 'patient' ? 'Paciente' : 'Cuidador(a)'}</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/(modals)/edit-profile')} style={styles.editButton}>
+        <TouchableOpacity
+          onPress={() => router.push('/(modals)/edit-profile')}
+          style={styles.editButton}
+          accessibilityRole="button"
+          accessibilityLabel="Editar perfil"
+        >
           <Pencil size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>

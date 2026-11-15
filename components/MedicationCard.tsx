@@ -1,10 +1,19 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { colors, getContentColorOn, getFontSize, spacing } from '@/constants/theme';
-import { Pill, Clock, AlertTriangle } from 'lucide-react-native';
+import { Pill, Tablets, Droplet, Droplets, Syringe, Clock, AlertTriangle } from 'lucide-react-native';
 import { ScheduledDose, Medication } from '@/types/medication';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Button } from './Button';
+
+// Ícone de acordo com a forma (antes era sempre comprimido, inclusive para injeção).
+const FORM_ICONS: Partial<Record<Medication['form'], typeof Pill>> = {
+  comprimido: Tablets,
+  'cápsula': Pill,
+  'líquido': Droplet,
+  gotas: Droplets,
+  'injeção': Syringe,
+};
 
 function isScheduledDose(med: Medication | ScheduledDose): med is ScheduledDose {
   return (med as ScheduledDose).scheduledDateTime !== undefined;
@@ -15,23 +24,34 @@ export type MedicationCardProps = {
   onPress: () => void;
   isNextDose?: boolean;
   onTakeDose?: (medication: ScheduledDose) => void;
+  /** Alternativa ao gesto de deslizar para quem usa leitor de tela. */
+  onDeleteAction?: () => void;
 };
 
-export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose }: MedicationCardProps) => {
+export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose, onDeleteAction }: MedicationCardProps) => {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const lowStock = (medication.stock <= medication.stockAlertThreshold);
   const isMissedDose = isScheduledDose(medication) && medication.isMissed;
 
-  // ✅ ALTERADO: Usa 'danger' para o ícone de dose atrasada
-  const iconColor = isMissedDose ? colors.danger : isNextDose ? colors.primary : (medication.color || colors.primary);
+  // Atraso é sinalizado pela borda e pela linha de horário; o ícone mantém a cor do remédio.
+  const iconColor = isNextDose ? colors.primary : (medication.color || colors.primary);
+  const FormIcon = FORM_ICONS[medication.form] ?? Pill;
+  const scheduleLabel = isScheduledDose(medication)
+    ? `${isMissedDose ? 'Atrasada' : medication.isToday ? 'Hoje' : 'Amanhã'} às ${medication.scheduledTime}`
+    : null;
+  const accessibilityLabel = [
+    medication.name,
+    medication.dosage,
+    scheduleLabel,
+    lowStock ? `estoque baixo, ${medication.stock} restantes` : null,
+  ].filter(Boolean).join(', ');
 
   const dynamicStyles = StyleSheet.create({
       medicationName: {
           fontSize: isNextDose ? fontSize.xl : fontSize.lg,
           fontWeight: isNextDose ? 'bold' : '600',
-          // ✅ ALTERADO: Usa 'danger' para o nome do medicamento atrasado
-          color: isMissedDose ? colors.danger : isNextDose ? colors.primary : colors.text,
+          color: isNextDose ? colors.primary : colors.text,
       },
       timeText: {
           fontSize: isNextDose ? fontSize.lg : fontSize.md,
@@ -54,9 +74,16 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
       ]} 
       onPress={onPress} 
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Abre os detalhes do medicamento"
+      accessibilityActions={onDeleteAction ? [{ name: 'delete', label: 'Excluir' }] : undefined}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'delete') onDeleteAction?.();
+      }}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
-        <Pill size={24} color={getContentColorOn(iconColor)} />
+        <FormIcon size={24} color={getContentColorOn(iconColor)} />
       </View>
       <View style={styles.detailsContainer}>
         <Text style={dynamicStyles.medicationName}>{medication.name}</Text>
@@ -64,17 +91,16 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
         {isScheduledDose(medication) && (
           <View style={styles.timeRow}>
             <Clock size={16} color={isMissedDose ? colors.danger : colors.textSecondary} />
-            <Text style={dynamicStyles.timeText}>
-              {isMissedDose ? 'ATRASADO:' : (medication.isToday ? 'Hoje' : 'Amanhã')} às {medication.scheduledTime}
-            </Text>
+            <Text style={dynamicStyles.timeText}>{scheduleLabel}</Text>
+          </View>
+        )}
+        {lowStock && (
+          <View style={styles.stockRow}>
+            <AlertTriangle size={16} color={colors.warning} />
+            <Text style={[styles.stockText, { fontSize: fontSize.sm }]}>Estoque baixo · {medication.stock} restantes</Text>
           </View>
         )}
       </View>
-      {lowStock && !isNextDose && !isMissedDose && (
-        <View style={styles.stockAlert}>
-          <AlertTriangle size={20} color={colors.warning} />
-        </View>
-      )}
       {onTakeDose && isScheduledDose(medication) && (
         <View style={styles.takeDoseButtonContainer}>
           <Button 
@@ -116,9 +142,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     gap: spacing.sm 
   },
-  stockAlert: { 
-    marginLeft: 'auto', 
-    paddingLeft: spacing.md 
+  stockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  stockText: {
+    color: colors.warning,
+    fontWeight: '500',
   },
   nextDoseCard: {
     backgroundColor: colors.primaryFaded,

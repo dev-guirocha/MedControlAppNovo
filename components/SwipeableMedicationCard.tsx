@@ -36,6 +36,8 @@ export function SwipeableMedicationCard({ medication, onPress, isNextDose, onDel
       <Animated.View style={{ width: 80, transform: [{ translateX: trans }] }}>
         <TouchableOpacity
           style={styles.deleteButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Excluir ${medication.name}`}
           onPress={() => {
             swipeableRef.current?.close();
             onDelete(medication.id);
@@ -65,6 +67,7 @@ export function SwipeableMedicationCard({ medication, onPress, isNextDose, onDel
         medication={medication}
         onPress={onPress}
         isNextDose={isNextDose}
+        onDeleteAction={() => onDelete(medication.id)}
       />
     </Swipeable>
   );

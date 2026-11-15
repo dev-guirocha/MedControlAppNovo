@@ -79,12 +79,18 @@ export default function AllMedicationsScreen() {
         <TextInput
           style={[styles.searchInput, { fontSize: fontSize.md }]}
           placeholder="Buscar em seus medicamentos..."
+          accessibilityLabel="Buscar medicamento"
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity
+            onPress={() => setSearchQuery('')}
+            accessibilityRole="button"
+            accessibilityLabel="Limpar busca"
+            hitSlop={12}
+          >
             <X size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : null}

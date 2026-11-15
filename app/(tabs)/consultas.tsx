@@ -44,7 +44,7 @@ const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appo
                 <Text style={[styles.doctorName, { fontSize: fontSize.lg }, isPast && styles.pastText]}>{item.doctorName}</Text>
                 <Text style={[styles.specialty, { fontSize: fontSize.md }, isPast && styles.pastText]}>{item.specialty}</Text>
             </View>
-            <TouchableOpacity onPress={() => onEdit(item)} style={styles.editButton}>
+            <TouchableOpacity onPress={() => onEdit(item)} style={styles.editButton} accessibilityRole="button" accessibilityLabel={`Editar consulta com ${item.doctorName}`} hitSlop={8}>
                 <Edit size={20} color={colors.primary} />
             </TouchableOpacity>
         </View>
@@ -62,6 +62,7 @@ const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appo
               <TouchableOpacity
                 style={styles.recipeButton}
                 onPress={() => onViewRecipe(item.recipeImageUrl!)}
+                accessibilityRole="button"
               >
                 <Receipt size={18} color="#143A63" />
                 <Text style={styles.recipeButtonText}>Ver Receita</Text>
@@ -85,7 +86,7 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete, onViewRecipe }: { it
         const trans = dragX.interpolate({ inputRange: [-80, 0], outputRange: [0, 80], extrapolate: 'clamp' });
         return (
             <Animated.View style={{ width: 80, transform: [{ translateX: trans }] }}>
-                <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePress}>
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePress} accessibilityRole="button" accessibilityLabel="Excluir consulta">
                     <Trash2 size={24} color={colors.textInverse} />
                     <DefaultText style={styles.deleteButtonText}>Excluir</DefaultText>
                 </TouchableOpacity>
@@ -190,7 +191,7 @@ export default function ConsultasScreen() {
             {selectedRecipeUri ? (
               <Image source={{ uri: selectedRecipeUri }} style={styles.recipePreviewImage} resizeMode="contain" />
             ) : null}
-            <TouchableOpacity style={styles.recipeModalCloseButton} onPress={() => setSelectedRecipeUri(null)}>
+            <TouchableOpacity style={styles.recipeModalCloseButton} onPress={() => setSelectedRecipeUri(null)} accessibilityRole="button">
               <Text style={styles.recipeModalCloseButtonText}>Fechar</Text>
             </TouchableOpacity>
           </View>

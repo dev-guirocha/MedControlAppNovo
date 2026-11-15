@@ -29,7 +29,7 @@ export default function AddMedicationScreen() {
         
         <View style={styles.optionCard}>
           <View style={styles.iconContainer}><PencilLine size={48} color={colors.primary} /></View>
-          <Text style={dynamicStyles.optionTitle}>Cadastrar Remédio de Controle</Text>
+          <Text style={dynamicStyles.optionTitle}>Cadastrar remédio com horário</Text>
           <Text style={dynamicStyles.optionDescription}>Adicione um novo remédio com horários fixos e lembretes.</Text>
           <Button title="Iniciar Cadastro" onPress={handleAddNew} size="large" variant="primary"/>
         </View>

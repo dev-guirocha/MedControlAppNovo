@@ -253,7 +253,7 @@ export default function MedicationFormScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Nome do Medicamento *</Text>
                         <TouchableOpacity style={styles.picker} onPress={() => router.push({pathname: '/(modals)/add-medication/search', params: { ...formData, weekdays: formData.weekdays.join(',') } as any })}>
-                            <Text style={[{fontSize: fontSize.lg}, !formData.name && styles.placeholderText]}>{formData.name || 'Clique para buscar'}</Text>
+                            <Text style={[{fontSize: fontSize.lg}, !formData.name && styles.placeholderText]}>{formData.name || 'Toque para buscar'}</Text>
                             <ChevronDown size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
