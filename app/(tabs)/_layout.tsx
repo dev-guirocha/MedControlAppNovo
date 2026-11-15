@@ -65,16 +65,20 @@ export default function TabLayout() {
         name="consultas"
         options={{
           title: 'Adicionar',
+          // O slot da aba ocupa a mesma largura das outras; o botão de 58dp ficava encostado
+          // à esquerda dele. O wrapper centraliza o botão no slot.
           tabBarButton: () => (
-            <TouchableOpacity
-              style={styles.centerActionButton}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              accessibilityLabel={centerActionLabel}
-              onPress={handleCenterAction}
-            >
-              <Plus color={colors.textInverse} size={24} strokeWidth={2.6} />
-            </TouchableOpacity>
+            <View style={styles.centerActionSlot}>
+              <TouchableOpacity
+                style={styles.centerActionButton}
+                activeOpacity={0.9}
+                accessibilityRole="button"
+                accessibilityLabel={centerActionLabel}
+                onPress={handleCenterAction}
+              >
+                <Plus color={colors.textInverse} size={24} strokeWidth={2.6} />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -94,6 +98,10 @@ const styles = StyleSheet.create({
   },
   tabIconWrapperActive: {
     backgroundColor: colors.tabBarItemActive,
+  },
+  centerActionSlot: {
+    flex: 1,
+    alignItems: 'center',
   },
   centerActionButton: {
     width: 58,
