@@ -33,7 +33,7 @@ export type MigratedSnapshot = DataSnapshot & {
 };
 
 /** A anamnese antiga era um único objeto (tem `chronicConditions`); a nova é um mapa por pessoa. */
-function isOldAnamnesis(value: unknown): value is Anamnesis {
+export function isOldAnamnesis(value: unknown): value is Anamnesis {
   return !!value && typeof value === 'object' && 'chronicConditions' in value;
 }
 

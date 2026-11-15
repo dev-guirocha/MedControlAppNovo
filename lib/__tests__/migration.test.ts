@@ -114,9 +114,9 @@ test('sem perfil mas com dados v1: pessoa "Eu" sem isSelf recebe tudo', () => {
   assert.deepEqual(r.anamnesis, { p1: anamnese });
 });
 
-test('dose gravada por task entre leitura e migração (sem personId) ganha a pessoa 1', () => {
+test('entrada v1 sem personId recebe a pessoa 1', () => {
   const snap = v1();
-  snap.doseHistory = [...snap.doseHistory, dose('d-task', 'm1')];
+  snap.doseHistory = [...snap.doseHistory, dose('d-nova', 'm1')];
   const r = migrateToV2(snap, deps());
-  assert.equal(r.doseHistory.find((d) => d.id === 'd-task')?.personId, 'p1');
+  assert.equal(r.doseHistory.find((d) => d.id === 'd-nova')?.personId, 'p1');
 });

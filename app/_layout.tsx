@@ -77,10 +77,17 @@ export default function RootLayout() {
         const Notifications = await import('expo-notifications');
 
         // Migra os dados para o formato com pessoas antes de qualquer store ler o disco.
-        await ensureDataMigrated();
+        // Se falhar, segue com os loads (dados v1 intactos no disco); a task tenta de novo.
+        try {
+          await ensureDataMigrated();
+        } catch (error) {
+          console.error('Error migrating data:', error);
+        }
+
+        // Pessoas antes dos demais, para o loadAnamnesis enxergar a pessoa ativa.
+        await loadPeople();
 
         await Promise.all([
-          loadPeople(),
           loadMedications(),
           loadSuggestions(),
           loadHistory(),
