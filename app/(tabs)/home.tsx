@@ -13,6 +13,8 @@ import { ScheduledDose } from '@/types/medication';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 import { toDayKey } from '@/lib/schedule';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { shouldShowPersonNames } from '@/lib/people';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,6 +26,18 @@ export default function HomeScreen() {
   const { isLoading } = useAppLoadingStore();
   const { doseHistory } = useDoseHistoryStore();
   const tabBarSpace = useTabBarSpace();
+  const people = usePeopleStore((s) => s.people);
+  const showPersonNames = shouldShowPersonNames(people);
+  // Hoje mostra todas as pessoas; o selo diz de quem é cada dose (só com 2+ pessoas).
+  const personOf = useCallback(
+    (personId: string) => {
+      if (!showPersonNames) return undefined;
+      const person = people.find((p) => p.id === personId);
+      return person ? { name: person.name, color: person.color } : undefined;
+    },
+    [people, showPersonNames]
+  );
+  const hasActiveMedications = allMedications.some((m) => !m.endedAt);
 
   const schedule = useDoseSchedule();
   const missedDoses = schedule.filter(dose => dose.isMissed);
@@ -79,7 +93,7 @@ export default function HomeScreen() {
           </StyledText>
         </View>
 
-        {allMedications.length > 0 && (
+        {hasActiveMedications && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryColumn}>
@@ -106,7 +120,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {allMedications.length === 0 ? (
+        {!hasActiveMedications ? (
           <View style={styles.emptyState}>
             <StyledText style={homeStyles.emptyTitle}>Nenhum medicamento adicionado</StyledText>
             <StyledText style={homeStyles.emptySubtitle}>Toque no botão '+' para começar.</StyledText>
@@ -120,6 +134,7 @@ export default function HomeScreen() {
                   <MedicationCard
                     key={dose.doseId}
                     medication={dose}
+                    person={personOf(dose.personId)}
                     onTakeDose={() => handleTakeDose(dose)}
                     onPress={() => router.push(`/medication/${dose.id}`)}
                   />
@@ -134,6 +149,7 @@ export default function HomeScreen() {
                         <MedicationCard
                             key={dose.doseId}
                             medication={dose}
+                            person={personOf(dose.personId)}
                             isNextDose={dose.doseId === nextDose?.doseId}
                             onTakeDose={() => handleTakeDose(dose)}
                             onPress={() => router.push(`/medication/${dose.id}`)}

@@ -11,6 +11,7 @@ import { Button } from '@/components/Button';
 import { Text } from '@/components/StyledText';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Plus } from 'lucide-react-native';
+import { PersonSelector } from '@/components/PersonSelector';
 
 const CheckboxItem = ({ label, value, onValueChange }: { label: string, value: boolean, onValueChange: (value: boolean) => void }) => (
   <View style={styles.checkboxContainer}>
@@ -20,10 +21,16 @@ const CheckboxItem = ({ label, value, onValueChange }: { label: string, value: b
 );
 
 export default function AnamnesisScreen() {
+  const activePersonId = usePeopleStore((s) => s.activePersonId);
+  // key: o formulário nasce com os dados da pessoa; ao trocar de pessoa ele é recriado,
+  // senão salvar gravaria os dados de uma pessoa na outra.
+  return <AnamnesisForm key={activePersonId ?? 'sem-pessoa'} />;
+}
+
+function AnamnesisForm() {
   const router = useRouter();
   const { fontScale } = useAuthStore();
   const { getAnamnesis, saveAnamnesis, exportAnamnesis } = useAnamnesisStore();
-  // Pessoa ativa; o seletor de pessoa entra na Task 7.
   const activePersonId = usePeopleStore((s) => s.activePersonId);
   const anamnesis = activePersonId ? getAnamnesis(activePersonId) : null;
   const fontSize = getFontSize(fontScale);
@@ -104,6 +111,7 @@ export default function AnamnesisScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <PersonSelector />
         <View style={styles.content}>
           <Text style={dynamicStyles.title}>Questionário de Anamnese</Text>
           <Text style={styles.subtitle}>Preencha seus dados médicos para mantê-los salvos e acessíveis.</Text>

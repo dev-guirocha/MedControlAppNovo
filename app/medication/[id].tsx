@@ -11,12 +11,15 @@ import Toast from 'react-native-root-toast';
 import { Medication } from '@/types/medication';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { shouldShowPersonNames } from '@/lib/people';
 import { getClosestScheduledDate, getMedicationWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
 export default function MedicationDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { medications, updateMedication, deleteMedication, logDose } = useMedicationStore();
+  const { medications, updateMedication, deleteMedication, logDose, endMedication, resumeMedication } = useMedicationStore();
+  const people = usePeopleStore((s) => s.people);
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const [loading, setLoading] = useState(false);
@@ -194,7 +197,26 @@ export default function MedicationDetailScreen() {
     );
   };
 
+  const handleEndTreatment = () => {
+    if (!medication) return;
+    const name = medication.name;
+    Alert.alert(`Encerrar ${name}?`, 'Os lembretes param e o remédio sai da tela Hoje. O histórico de doses continua guardado.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Encerrar', style: 'destructive', onPress: () => void endMedication(medication.id) },
+      ]
+    );
+  };
+
+  const handleResumeTreatment = () => {
+    if (!medication) return;
+    void resumeMedication(medication.id);
+  };
+
   const lowStock = medication ? medication.stock <= medication.stockAlertThreshold : false;
+  const isEnded = Boolean(medication?.endedAt);
+  const personName = medication ? people.find((p) => p.id === medication.personId)?.name : undefined;
+  const endedOn = medication?.endedAt ? new Date(medication.endedAt).toLocaleDateString('pt-BR') : '';
   const isAsNeeded = medication?.frequency === 'quando necessário';
 
   if (!medication) {
@@ -211,6 +233,8 @@ export default function MedicationDetailScreen() {
             <Text style={[styles.dosage, { fontSize: fontSize.xl }]}>{medication.dosage}</Text>
             {medication.condition && (<View style={styles.infoRow}><Pill size={18} color={colors.textSecondary} /><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.condition}</Text></View>)}
             {medication.doctor && (<View style={styles.infoRow}><User size={18} color={colors.textSecondary} /><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.doctor}</Text></View>)}
+            {shouldShowPersonNames(people) && personName && (<View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Pessoa:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{personName}</Text></View>)}
+            {isEnded && (<View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Encerrado em {endedOn}</Text></View>)}
             <View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Forma:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.form}</Text></View>
             <View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Frequência:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.frequency === 'semanal' ? `semanal (${getMedicationWeekdays(medication).map((day) => WEEKDAY_LABELS[day]).join(', ')})` : medication.frequency}</Text></View>
             {medication.times && medication.times.length > 0 && (<View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Horários:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.times.join(', ')}</Text></View>)}
@@ -222,6 +246,7 @@ export default function MedicationDetailScreen() {
           </View>
           
           {/* ✅ CARD DE AÇÃO REINSERIDO */}
+          {!isEnded && (
           <View style={styles.card}>
               <Text style={[styles.cardTitle, { fontSize: fontSize.lg }]}>
                 {isAsNeeded ? 'Registrar Dose' : 'Registrar Próxima Dose'}
@@ -234,6 +259,13 @@ export default function MedicationDetailScreen() {
                 )}
               </View>
           </View>
+          )}
+
+          {isEnded ? (
+            <Button title="Retomar tratamento" onPress={handleResumeTreatment} variant="success" iconName="Play" style={{ marginBottom: spacing.md }} />
+          ) : (
+            <Button title="Encerrar tratamento" onPress={handleEndTreatment} variant="secondary" style={{ marginBottom: spacing.md }} />
+          )}
 
           <View style={styles.managementButtons}>
               <Button title="Editar" onPress={handleEdit} variant="secondary" iconName="Pencil" style={{flex:1}} />

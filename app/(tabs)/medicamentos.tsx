@@ -4,15 +4,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
+import { MedicationCard } from '@/components/MedicationCard';
 import { SwipeableMedicationCard } from '@/components/SwipeableMedicationCard';
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Pill, Search, X } from 'lucide-react-native';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
+import { PersonSelector } from '@/components/PersonSelector';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import type { Medication } from '@/types/medication';
+
+function formatEndedDate(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('pt-BR');
+}
 
 export default function AllMedicationsScreen() {
   const router = useRouter();
-  const { medications, deleteMedication } = useMedicationStore();
+  const { medications: allMedications, deleteMedication } = useMedicationStore();
+  const activePersonId = usePeopleStore((s) => s.activePersonId);
+  const medications = useMemo(
+    () => allMedications.filter((med) => med.personId === activePersonId),
+    [allMedications, activePersonId]
+  );
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,8 +52,8 @@ export default function AllMedicationsScreen() {
   // ✅ Lógica para filtrar e agrupar os medicamentos
   const groupedMedications = useMemo(() => {
     // 1. Filtra os medicamentos com base na busca
-    const filtered = medications.filter(med => 
-      med.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = medications.filter(med =>
+      !med.endedAt && med.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // 2. Agrupa os medicamentos filtrados pela letra inicial
@@ -52,16 +67,24 @@ export default function AllMedicationsScreen() {
     }, {} as Record<string, typeof medications>);
 
     // 3. Formata para o formato que a SectionList espera
-    return Object.keys(groups).sort().map(letter => ({
+    const sections: { title: string; data: Medication[]; ended?: boolean }[] = Object.keys(groups).sort().map(letter => ({
       title: letter,
       data: groups[letter],
     }));
+
+    // 4. Tratamentos encerrados ficam numa seção própria, abaixo dos ativos
+    const ended = medications
+      .filter(med => med.endedAt && med.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    if (ended.length > 0) sections.push({ title: 'Encerrados', data: ended, ended: true });
+    return sections;
   }, [medications, searchQuery]);
 
   // Se não houver nenhum medicamento cadastrado, mostra o estado de boas-vindas
   if (medications.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={[]}>
+        <PersonSelector />
         <View style={styles.emptyState}>
           <Pill size={64} color={colors.disabled} />
           <Text style={[styles.emptyTitle, { fontSize: fontSize.xl }]}>Nenhum medicamento adicionado</Text>
@@ -73,6 +96,7 @@ export default function AllMedicationsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
+      <PersonSelector />
       {/* ✅ Barra de Busca */}
       <View style={styles.searchContainer}>
         <Search size={20} color={colors.textSecondary} />
@@ -100,13 +124,23 @@ export default function AllMedicationsScreen() {
       <SectionList
         sections={groupedMedications}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <SwipeableMedicationCard
-            medication={item}
-            onDelete={() => handleDelete(item.id)}
-            onPress={() => router.push(`/medication/${item.id}`)}
-          />
-        )}
+        renderItem={({ item, section }) =>
+          section.ended ? (
+            <View>
+              <MedicationCard
+                medication={item}
+                onPress={() => router.push(`/medication/${item.id}`)}
+              />
+              <Text style={[styles.endedDate, { fontSize: fontSize.sm }]}>encerrado em {formatEndedDate(item.endedAt)}</Text>
+            </View>
+          ) : (
+            <SwipeableMedicationCard
+              medication={item}
+              onDelete={() => handleDelete(item.id)}
+              onPress={() => router.push(`/medication/${item.id}`)}
+            />
+          )
+        }
         renderSectionHeader={({ section: { title } }) => (
           <Text style={[styles.sectionHeader, { fontSize: fontSize.lg }]}>{title}</Text>
         )}
@@ -154,6 +188,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     color: colors.primary,
   },
+  endedDate: { color: colors.textSecondary, marginTop: -spacing.xs, marginBottom: spacing.md, marginLeft: spacing.xs },
   emptyState: { 
     flex: 1, 
     alignItems: 'center', 

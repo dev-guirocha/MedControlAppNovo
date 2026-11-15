@@ -11,6 +11,9 @@ import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 import { toDayKey } from '@/lib/schedule';
+import { PersonSelector } from '@/components/PersonSelector';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { useMedicationStore } from '@/hooks/useMedicationStore';
 
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -51,7 +54,20 @@ const HistoryItem = ({ item, fontSize }: { item: DoseHistory, fontSize: any }) =
 };
 
 export default function HistoryScreen() {
-  const { doseHistory } = useDoseHistoryStore();
+  const { doseHistory: allDoseHistory } = useDoseHistoryStore();
+  const allMedications = useMedicationStore((s) => s.medications);
+  const activePersonId = usePeopleStore((s) => s.activePersonId);
+  // Doses de cada pessoa ficam pela personId da própria entrada (o remédio pode ter sido excluído).
+  const doseHistory = useMemo(
+    () => allDoseHistory.filter((item) => item.personId === activePersonId),
+    [allDoseHistory, activePersonId]
+  );
+  const endedMedications = useMemo(
+    () => allMedications
+      .filter((m) => m.personId === activePersonId && m.endedAt)
+      .sort((a, b) => new Date(b.endedAt!).getTime() - new Date(a.endedAt!).getTime()),
+    [allMedications, activePersonId]
+  );
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const tabBarSpace = useTabBarSpace();
@@ -120,6 +136,7 @@ export default function HistoryScreen() {
   
   return (
     <SafeAreaView style={styles.container} edges={[]}>
+      <PersonSelector />
       <Calendar
         key={fontScale} // o calendário só lê o tema na montagem
         onDayPress={day => setSelectedDate(day.dateString)}
@@ -127,19 +144,30 @@ export default function HistoryScreen() {
         theme={calendarTheme}
       />
       
-      {selectedDayHistory.length === 0 ? (
-        <View style={styles.emptyState}>
-          <CalendarClock size={48} color={colors.disabled} />
-          <Text style={[styles.emptyTitle, { fontSize: fontSize.lg }]}>Nenhum registro para este dia</Text>
-        </View>
-      ) : (
-        <FlatList
-            data={selectedDayHistory}
-            keyExtractor={(item) => item.id}
-            renderItem={({item}) => <HistoryItem item={item} fontSize={fontSize} />}
-            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarSpace }]}
-        />
-      )}
+      <FlatList
+        data={selectedDayHistory}
+        keyExtractor={(item) => item.id}
+        renderItem={({item}) => <HistoryItem item={item} fontSize={fontSize} />}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <CalendarClock size={48} color={colors.disabled} />
+            <Text style={[styles.emptyTitle, { fontSize: fontSize.lg }]}>Nenhum registro para este dia</Text>
+          </View>
+        }
+        ListFooterComponent={
+          endedMedications.length > 0 ? (
+            <View style={styles.endedSection}>
+              <Text style={[styles.endedTitle, { fontSize: fontSize.lg }]}>Tratamentos encerrados</Text>
+              {endedMedications.map((med) => (
+                <Text key={med.id} style={[styles.endedItem, { fontSize: fontSize.md }]}>
+                  {med.name} · encerrado em {new Date(med.endedAt!).toLocaleDateString('pt-BR')}
+                </Text>
+              ))}
+            </View>
+          ) : null
+        }
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarSpace }]}
+      />
     </SafeAreaView>
   );
 }
@@ -147,7 +175,10 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   listContent: { padding: spacing.lg },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: spacing.xl, paddingTop: spacing.xxl },
+  emptyState: { alignItems: 'center', justifyContent: 'flex-start', padding: spacing.xl, paddingTop: spacing.xxl },
+  endedSection: { marginTop: spacing.lg },
+  endedTitle: { fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  endedItem: { color: colors.textSecondary, marginBottom: spacing.xs },
   emptyTitle: { fontWeight: '600', color: colors.textSecondary, marginTop: spacing.lg },
   itemContainer: {
     flexDirection: 'row',

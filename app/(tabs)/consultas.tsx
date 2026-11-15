@@ -10,6 +10,8 @@ import { Appointment } from '@/types/medication';
 import { Text } from '@/components/StyledText';
 import { Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
+import { PersonSelector } from '@/components/PersonSelector';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
 
 // Card da Consulta (sem lógica de arrastar)
 const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appointment; onEdit: (item: Appointment) => void; onViewRecipe: (recipeUri: string) => void; }) => {
@@ -110,7 +112,12 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete, onViewRecipe }: { it
 
 export default function ConsultasScreen() {
   const router = useRouter();
-  const { appointments, deleteAppointment } = useAppointmentStore();
+  const { appointments: allAppointments, deleteAppointment } = useAppointmentStore();
+  const activePersonId = usePeopleStore((s) => s.activePersonId);
+  const appointments = useMemo(
+    () => allAppointments.filter((a) => a.personId === activePersonId),
+    [allAppointments, activePersonId]
+  );
   const tabBarSpace = useTabBarSpace();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
@@ -149,6 +156,7 @@ export default function ConsultasScreen() {
   if (appointments.length === 0) {
     return (
         <SafeAreaView style={styles.container} edges={[]}>
+            <PersonSelector />
             <View style={styles.emptyState}>
               <Stethoscope size={64} color={colors.disabled}/>
               <Text style={[styles.emptyTitle, {fontSize: fontSize.xl}]}>Nenhuma consulta agendada</Text>
@@ -160,6 +168,7 @@ export default function ConsultasScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
+      <PersonSelector />
       <SectionList
         sections={sections}
         keyExtractor={item => item.id}

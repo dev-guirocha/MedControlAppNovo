@@ -26,9 +26,11 @@ export type MedicationCardProps = {
   onTakeDose?: (medication: ScheduledDose) => void;
   /** Alternativa ao gesto de deslizar para quem usa leitor de tela. */
   onDeleteAction?: () => void;
+  /** Dono do remédio; passado só quando há 2+ pessoas. */
+  person?: { name: string; color: string };
 };
 
-export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose, onDeleteAction }: MedicationCardProps) => {
+export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose, onDeleteAction, person }: MedicationCardProps) => {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const lowStock = (medication.stock <= medication.stockAlertThreshold);
@@ -41,6 +43,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
     ? `${isMissedDose ? 'Atrasada' : medication.isToday ? 'Hoje' : 'Amanhã'} às ${medication.scheduledTime}`
     : null;
   const accessibilityLabel = [
+    person?.name,
     medication.name,
     medication.dosage,
     scheduleLabel,
@@ -86,6 +89,13 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
         <FormIcon size={24} color={getContentColorOn(iconColor)} />
       </View>
       <View style={styles.detailsContainer}>
+        {person && (
+          <View style={[styles.personBadge, { backgroundColor: person.color }]}>
+            <Text numberOfLines={1} style={{ fontSize: fontSize.sm, fontWeight: '600', color: getContentColorOn(person.color) }}>
+              {person.name}
+            </Text>
+          </View>
+        )}
         <Text style={dynamicStyles.medicationName}>{medication.name}</Text>
         <Text style={dynamicStyles.dosage}>{medication.dosage}</Text>
         {isScheduledDose(medication) && (
@@ -136,6 +146,13 @@ const styles = StyleSheet.create({
   },
   detailsContainer: { 
     flex: 1 
+  },
+  personBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    marginBottom: spacing.xs,
   },
   timeRow: { 
     flexDirection: 'row', 
