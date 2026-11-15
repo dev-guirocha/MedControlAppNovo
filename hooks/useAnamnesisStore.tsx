@@ -7,6 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { Anamnesis } from '@/types/medication';
 import { showErrorToast } from '@/lib/toastHelper';
 import { useAuthStore } from './useAuthStore';
+import { usePeopleStore } from './usePeopleStore';
 import { ANAMNESIS_KEY } from '../src/constants/keys';
 
 type AnamnesisData = Omit<Anamnesis, 'id' | 'lastUpdated'>;
@@ -62,8 +63,18 @@ export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
       const stored = await AsyncStorage.getItem(ANAMNESIS_KEY);
       if (!stored) return;
 
-      const parsed: Anamnesis = JSON.parse(stored);
-      set({ anamnesis: parsed });
+      // Após a migração v2 o disco guarda um mapa personId -> anamnese. Até a anamnese ficar
+      // por pessoa (Task 5), usa a da pessoa ativa ou a primeira do mapa.
+      const parsed = JSON.parse(stored);
+      const isMap = parsed && typeof parsed === 'object' && !('chronicConditions' in parsed);
+      if (isMap) {
+        const map = parsed as Record<string, Anamnesis>;
+        const activeId = usePeopleStore.getState().activePersonId;
+        const entry = (activeId && map[activeId]) || Object.values(map)[0] || null;
+        set({ anamnesis: entry });
+      } else {
+        set({ anamnesis: parsed as Anamnesis });
+      }
     } catch (error) {
       console.error('Error loading anamnesis:', error);
     }

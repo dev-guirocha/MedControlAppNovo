@@ -12,6 +12,8 @@ import { useMedicationSuggestionsStore } from "@/hooks/useMedicationSuggestionsS
 import { useDoseHistoryStore } from "@/hooks/useDoseHistoryStore";
 import { useAppointmentStore } from "@/hooks/useAppointmentStore";
 import { useAnamnesisStore } from "@/hooks/useAnamnesisStore";
+import { usePeopleStore } from "@/hooks/usePeopleStore";
+import { ensureDataMigrated } from "@/lib/dataMigration";
 import { initializeNotificationsAsync } from "@/lib/notifications";
 import { handleDoseActionResponse, hydrateDoseStoresFromStorage, registerDoseActionTaskAsync } from "@/lib/doseNotificationActions";
 import { colors } from '@/constants/theme';
@@ -52,6 +54,7 @@ export default function RootLayout() {
   const { loadHistory } = useDoseHistoryStore();
   const { loadAppointments } = useAppointmentStore();
   const { loadAnamnesis } = useAnamnesisStore();
+  const { loadPeople } = usePeopleStore();
   const { stopLoading } = useAppLoadingStore();
 
   useEffect(() => {
@@ -73,7 +76,11 @@ export default function RootLayout() {
         await initializeNotificationsAsync();
         const Notifications = await import('expo-notifications');
 
+        // Migra os dados para o formato com pessoas antes de qualquer store ler o disco.
+        await ensureDataMigrated();
+
         await Promise.all([
+          loadPeople(),
           loadMedications(),
           loadSuggestions(),
           loadHistory(),
