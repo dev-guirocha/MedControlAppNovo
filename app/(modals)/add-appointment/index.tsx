@@ -4,6 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppointmentStore } from '@/hooks/useAppointmentStore';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAuthStore } from '@/hooks/useAuthStore';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { showErrorToast } from '@/lib/toastHelper';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/StyledText';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -70,7 +72,13 @@ export default function AddAppointmentForm() {
     if (isEditing) {
       await updateAppointment(formData.id!, appointmentData);
     } else {
-      await addAppointment(appointmentData);
+      // A Task 8 troca a pessoa ativa pela escolha "Para:".
+      const personId = usePeopleStore.getState().activePersonId;
+      if (!personId) {
+        showErrorToast('Cadastre uma pessoa antes de continuar.');
+        return;
+      }
+      await addAppointment({ ...appointmentData, personId });
     }
     router.back();
   };

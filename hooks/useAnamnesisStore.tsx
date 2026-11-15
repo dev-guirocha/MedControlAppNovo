@@ -8,17 +8,17 @@ import { Anamnesis } from '@/types/medication';
 import { showErrorToast } from '@/lib/toastHelper';
 import { useAuthStore } from './useAuthStore';
 import { isOldAnamnesis } from '@/lib/migration';
-import { usePeopleStore } from './usePeopleStore';
+import { usePeopleStore, getPersonName } from './usePeopleStore';
 import { ANAMNESIS_KEY } from '../src/constants/keys';
 
 type AnamnesisData = Omit<Anamnesis, 'id' | 'lastUpdated'>;
 
 interface AnamnesisState {
-  anamnesis: Anamnesis | null;
+  anamnesisByPerson: Record<string, Anamnesis>;
   loadAnamnesis: () => Promise<void>;
-  saveAnamnesis: (anamnesisData: AnamnesisData) => Promise<void>;
-  updateAnamnesis: (updates: Partial<Anamnesis>) => Promise<void>;
-  exportAnamnesis: (currentData: AnamnesisData) => Promise<boolean>; // ✅ Modificado para receber os dados
+  getAnamnesis: (personId: string) => Anamnesis | null;
+  saveAnamnesis: (personId: string, anamnesisData: AnamnesisData) => Promise<void>;
+  exportAnamnesis: (personId: string, currentData: AnamnesisData) => Promise<boolean>;
 }
 
 const createAnamnesisHtml = (anamnesis: AnamnesisData, userName: string): string => {
@@ -57,82 +57,51 @@ const createAnamnesisHtml = (anamnesis: AnamnesisData, userName: string): string
 };
 
 export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
-  anamnesis: null,
-  
+  anamnesisByPerson: {},
+
   loadAnamnesis: async () => {
     try {
       const stored = await AsyncStorage.getItem(ANAMNESIS_KEY);
       if (!stored) return;
 
-      // Após a migração v2 o disco guarda um mapa personId -> anamnese. Até a anamnese ficar
-      // por pessoa (Task 5), usa a da pessoa ativa ou a primeira do mapa.
       const parsed = JSON.parse(stored);
-      if (parsed && typeof parsed === 'object' && !isOldAnamnesis(parsed)) {
-        const map = parsed as Record<string, Anamnesis>;
-        const activeId = usePeopleStore.getState().activePersonId;
-        const entry = (activeId && map[activeId]) || Object.values(map)[0] || null;
-        set({ anamnesis: entry });
+      if (!parsed || typeof parsed !== 'object') return;
+
+      if (isOldAnamnesis(parsed)) {
+        // Objeto único antigo (gravado entre a migração e a anamnese por pessoa):
+        // pertence à pessoa ativa, ou à primeira se não houver ativa. Vai pro disco no próximo save.
+        const { activePersonId, people } = usePeopleStore.getState();
+        const ownerId = activePersonId ?? people[0]?.id;
+        set({ anamnesisByPerson: ownerId ? { [ownerId]: parsed as Anamnesis } : {} });
       } else {
-        set({ anamnesis: parsed as Anamnesis });
+        set({ anamnesisByPerson: parsed as Record<string, Anamnesis> });
       }
     } catch (error) {
       console.error('Error loading anamnesis:', error);
     }
   },
-  
-  saveAnamnesis: async (anamnesisData) => {
+
+  getAnamnesis: (personId) => get().anamnesisByPerson[personId] ?? null,
+
+  saveAnamnesis: async (personId, anamnesisData) => {
     try {
-      const current = get().anamnesis;
+      const current = get().anamnesisByPerson[personId];
       const updated: Anamnesis = {
         ...anamnesisData,
         id: current?.id ?? Crypto.randomUUID(),
         lastUpdated: new Date().toISOString(),
       };
+      const nextMap = { ...get().anamnesisByPerson, [personId]: updated };
 
-      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(updated));
-      set({ anamnesis: updated });
+      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(nextMap));
+      set({ anamnesisByPerson: nextMap });
     } catch (error) {
       console.error('Error saving anamnesis:', error);
       showErrorToast('Erro ao salvar a anamnese.');
     }
   },
 
-  updateAnamnesis: async (updates) => {
-    const current = get().anamnesis;
-    if (!current) {
-      // Se não houver cadastro prévio, salva um novo com os dados informados.
-      await get().saveAnamnesis({
-        chronicConditions: updates.chronicConditions ?? [''],
-        allergies: updates.allergies ?? [''],
-        surgeries: updates.surgeries ?? [''],
-        familyHistory: updates.familyHistory ?? {
-          hypertension: false,
-          diabetes: false,
-          heartDisease: false,
-          cancer: false,
-          other: '',
-        },
-        otherNotes: updates.otherNotes ?? '',
-      });
-      return;
-    }
-
-    try {
-      const merged: Anamnesis = {
-        ...current,
-        ...updates,
-        lastUpdated: new Date().toISOString(),
-      };
-
-      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(merged));
-      set({ anamnesis: merged });
-    } catch (error) {
-      console.error('Error updating anamnesis:', error);
-      showErrorToast('Erro ao atualizar a anamnese.');
-    }
-  },
-
-  exportAnamnesis: async (currentData) => {
+  exportAnamnesis: async (personId, currentData) => {
     const userProfile = useAuthStore.getState().userProfile;
 
     const hasData =
@@ -142,21 +111,20 @@ export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
       (currentData.familyHistory && Object.values(currentData.familyHistory).some(v => v)) ||
       currentData.otherNotes?.trim();
 
-    // Se não houver dados ou perfil de usuário, retorna false.
-    if (!hasData || !userProfile) {
+    if (!hasData) {
       return false;
     }
 
     try {
-      const htmlContent = createAnamnesisHtml(currentData, userProfile.name ?? 'Paciente');
+      // O PDF leva o nome da pessoa; o do perfil só entra se a pessoa não tiver nome.
+      const patientName = getPersonName(personId) || userProfile?.name || 'Paciente';
+      const htmlContent = createAnamnesisHtml(currentData, patientName);
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      
+
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Compartilhar Anamnese' });
-      // Retorna true se o compartilhamento foi iniciado com sucesso.
       return true;
     } catch (error) {
       console.error('Erro ao exportar anamnese:', error);
-      // Retorna false em caso de erro.
       return false;
     }
   },

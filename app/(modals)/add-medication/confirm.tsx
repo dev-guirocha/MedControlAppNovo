@@ -6,6 +6,8 @@ import { Button } from '@/components/Button';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { Check, X } from 'lucide-react-native';
 import { useAuthStore } from '@/hooks/useAuthStore';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { showErrorToast } from '@/lib/toastHelper';
 import { Text } from '@/components/StyledText';
 import { normalizeWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
@@ -49,7 +51,13 @@ export default function ConfirmMedicationScreen() {
       if (params.id) {
         await updateMedication(params.id as string, medicationData);
       } else {
-        await addMedication(medicationData);
+        // A Task 8 troca a pessoa ativa pela escolha "Para:".
+        const personId = usePeopleStore.getState().activePersonId;
+        if (!personId) {
+          showErrorToast('Cadastre uma pessoa antes de continuar.');
+          return;
+        }
+        await addMedication({ ...medicationData, personId });
       }
 
       router.replace('/(tabs)/home');

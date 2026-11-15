@@ -3,6 +3,8 @@ import { View, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Switch, Al
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { useAnamnesisStore } from '@/hooks/useAnamnesisStore';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { showErrorToast } from '@/lib/toastHelper';
 import { Anamnesis } from '@/types/medication';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
@@ -20,7 +22,10 @@ const CheckboxItem = ({ label, value, onValueChange }: { label: string, value: b
 export default function AnamnesisScreen() {
   const router = useRouter();
   const { fontScale } = useAuthStore();
-  const { anamnesis, saveAnamnesis, exportAnamnesis } = useAnamnesisStore();
+  const { getAnamnesis, saveAnamnesis, exportAnamnesis } = useAnamnesisStore();
+  // Pessoa ativa; o seletor de pessoa entra na Task 7.
+  const activePersonId = usePeopleStore((s) => s.activePersonId);
+  const anamnesis = activePersonId ? getAnamnesis(activePersonId) : null;
   const fontSize = getFontSize(fontScale);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -40,8 +45,12 @@ export default function AnamnesisScreen() {
   });
 
   const handleSave = async () => {
+    if (!activePersonId) {
+      showErrorToast('Cadastre uma pessoa antes de continuar.');
+      return;
+    }
     setLoading(true);
-    await saveAnamnesis(formData);
+    await saveAnamnesis(activePersonId, formData);
     setLoading(false);
     router.back();
   };
@@ -59,9 +68,13 @@ export default function AnamnesisScreen() {
   };
   
   const handleExport = async () => {
+    if (!activePersonId) {
+      showErrorToast('Cadastre uma pessoa antes de continuar.');
+      return;
+    }
     setIsExporting(true);
     // ✅ A função do store agora retorna um booleano
-    const success = await exportAnamnesis(formData);
+    const success = await exportAnamnesis(activePersonId, formData);
     setIsExporting(false);
 
     // ✅ A lógica do Alert agora vive no componente

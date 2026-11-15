@@ -12,8 +12,8 @@ export interface Person {
 
 export interface Medication {
   id: string;
-  /** Dono do remédio. Opcional por enquanto; a Task 5 torna obrigatório. */
-  personId?: string;
+  /** Dono do remédio. */
+  personId: string;
   name: string;
   dosage: string;
   color?: string;
@@ -59,8 +59,8 @@ export interface UserProfile {
 
 export interface Appointment {
   id: string;
-  /** Opcional por enquanto; a Task 5 torna obrigatório. */
-  personId?: string;
+  /** Dono da consulta. */
+  personId: string;
   doctorName: string;
   specialty: string;
   location: string;

@@ -10,6 +10,8 @@ import { COMMON_MEDICATIONS } from '@/constants/commonMedications';
 import { useMedicationSuggestionsStore } from '@/hooks/useMedicationSuggestionsStore';
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { showErrorToast } from '@/lib/toastHelper';
 
 
 type ListItem = Medication | { name: string; dosage: string; isSuggestion?: boolean };
@@ -58,7 +60,14 @@ export default function LogAsNeededScreen() {
           {
             text: 'Adicionar',
             onPress: async () => {
+              // A Task 8 troca a pessoa ativa pela escolha "Para:".
+              const personId = usePeopleStore.getState().activePersonId;
+              if (!personId) {
+                showErrorToast('Cadastre uma pessoa antes de continuar.');
+                return;
+              }
               const newMedicationData = {
+                personId,
                 name: item.name,
                 dosage: item.dosage,
                 form: 'comprimido' as Medication['form'],
