@@ -44,7 +44,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         for (const medication of parsedMedications) {
           // Só restaura os lembretes recorrentes. O alerta de estoque dispara na hora em que o
           // estoque muda (logDose/updateMedication); reagendá-lo aqui o repetia a cada abertura.
-          if (medication.endedAt) continue;
+          if (medication.endedAt) {
+            // Autocorrige um cancelamento que tenha falhado ao encerrar.
+            await cancelMedicationNotifications(medication.id);
+            continue;
+          }
           await scheduleMedicationNotifications(medication, { personName: resolvePersonName(medication) });
         }
       } catch (notificationError) {
@@ -164,8 +168,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   rescheduleAll: async () => {
     for (const medication of get().medications) {
       try {
-        await cancelMedicationNotifications(medication.id);
-        if (medication.endedAt) continue;
+        if (medication.endedAt) {
+          await cancelMedicationNotifications(medication.id);
+          continue;
+        }
+        // O agendamento já cancela os lembretes anteriores do remédio.
         await scheduleMedicationNotifications(medication, { personName: resolvePersonName(medication) });
       } catch (notificationError) {
         console.error('Error rescheduling medication notifications:', notificationError);
@@ -236,7 +243,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
       // 4. Disparar a verificação de notificação de estoque
-      await scheduleStockNotification(updatedMed, { personName: resolvePersonName(updatedMed) });
+      if (!updatedMed.endedAt) await scheduleStockNotification(updatedMed, { personName: resolvePersonName(updatedMed) });
     } catch (error) {
       console.error('Error saving medication after logging dose:', error);
       showErrorToast('Erro ao atualizar o estoque do medicamento.');
