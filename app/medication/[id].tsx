@@ -249,7 +249,9 @@ export default function MedicationDetailScreen() {
           {!isEnded && (
           <View style={styles.card}>
               <Text style={[styles.cardTitle, { fontSize: fontSize.lg }]}>
-                {isAsNeeded ? 'Registrar Dose' : 'Registrar Próxima Dose'}
+                {shouldShowPersonNames(people) && personName
+                  ? `Registrar dose de ${personName}`
+                  : isAsNeeded ? 'Registrar Dose' : 'Registrar Próxima Dose'}
               </Text>
               <View style={styles.doseButtons}>
                 <Button title="Tomei" onPress={handleTakeDose} variant="success" size="large" loading={loading} />

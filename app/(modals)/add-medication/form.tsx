@@ -20,6 +20,9 @@ import { useAuthStore } from '@/hooks/useAuthStore';
 import type { FontScale } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import type { Medication } from '@/types/medication';
+import { PersonField } from '@/components/PersonChips';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { normalizeWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
 const FORMS = ['comprimido', 'cápsula', 'líquido', 'injeção', 'pomada', 'gotas'];
@@ -27,6 +30,7 @@ const FREQUENCIES = ['diária', 'a cada 8h', 'a cada 12h', 'semanal', 'quando ne
 
 type MedicationFormState = {
     id?: string;
+    personId: string;
     name: string;
     dosage: string;
     color: string;
@@ -117,6 +121,7 @@ export default function MedicationFormScreen() {
 
         return {
             id: initialId || undefined,
+            personId: toStringParam(params.personId) || usePeopleStore.getState().activePersonId || '',
             name: initialSelectedName || toStringParam(params.name),
             dosage: toStringParam(params.selectedDosage) || toStringParam(params.dosage),
             color: toStringParam(params.color, medicationColors[0]),
@@ -134,6 +139,7 @@ export default function MedicationFormScreen() {
 
     const formStateSignature = JSON.stringify({
         id: params.id,
+        personId: params.personId,
         name: params.name,
         selectedName: params.selectedName,
         dosage: params.dosage,
@@ -157,6 +163,7 @@ export default function MedicationFormScreen() {
     }, [formStateSignature]);
 
     const isEditing = !!params.id;
+    const editedMedicationPersonId = useMedicationStore((s) => s.medications.find((m) => m.id === params.id)?.personId);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [timePickerIndex, setTimePickerIndex] = useState(0);
     const [tempTime, setTempTime] = useState(new Date());
@@ -237,6 +244,7 @@ export default function MedicationFormScreen() {
         const normalizedFormData = {
             ...formData,
             id: formData.id || undefined,
+            personId: isEditing ? (editedMedicationPersonId ?? formData.personId) : formData.personId,
         };
         router.push({
             pathname: '/(modals)/add-medication/confirm',
@@ -250,6 +258,11 @@ export default function MedicationFormScreen() {
         <SafeAreaView style={styles.container}>
             <KeyboardAwareScrollView>
                 <View style={styles.form}>
+                    <PersonField
+                        value={isEditing ? editedMedicationPersonId : formData.personId}
+                        onChange={(personId) => setFormData((prev) => ({ ...prev, personId }))}
+                        readOnly={isEditing}
+                    />
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Nome do Medicamento *</Text>
                         <TouchableOpacity style={styles.picker} onPress={() => router.push({pathname: '/(modals)/add-medication/search', params: { ...formData, weekdays: formData.weekdays.join(',') } as any })}>

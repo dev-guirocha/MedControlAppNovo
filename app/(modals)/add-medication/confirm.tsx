@@ -8,6 +8,7 @@ import { Check, X } from 'lucide-react-native';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { showErrorToast } from '@/lib/toastHelper';
+import { PersonField } from '@/components/PersonChips';
 import { Text } from '@/components/StyledText';
 import { normalizeWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
@@ -28,6 +29,7 @@ export default function ConfirmMedicationScreen() {
   }
 
   const weekdaysParam = Array.isArray(params.weekdays) ? params.weekdays.join(',') : params.weekdays;
+  const confirmPersonId = (Array.isArray(params.personId) ? params.personId[0] : params.personId) || usePeopleStore.getState().activePersonId;
   const weekdaysLabel = normalizeWeekdays(weekdaysParam).map((day) => WEEKDAY_LABELS[day]).join(', ');
 
   const handleConfirm = async () => {
@@ -52,7 +54,7 @@ export default function ConfirmMedicationScreen() {
         await updateMedication(params.id as string, medicationData);
       } else {
         // A Task 8 troca a pessoa ativa pela escolha "Para:".
-        const personId = usePeopleStore.getState().activePersonId;
+        const personId = confirmPersonId;
         if (!personId) {
           showErrorToast('Cadastre uma pessoa antes de continuar.');
           return;
@@ -83,6 +85,7 @@ export default function ConfirmMedicationScreen() {
         <View style={styles.content}>
           <Text style={dynamicStyles.title}>Confirme os dados</Text>
           <Text style={dynamicStyles.subtitle}>Revise as informações antes de salvar.</Text>
+          <PersonField value={confirmPersonId} onChange={() => {}} readOnly />
           <View style={styles.card}>
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Nome</Text><Text style={dynamicStyles.fieldValue}>{params.name}</Text></View><View style={styles.divider} />
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Dosagem</Text><Text style={dynamicStyles.fieldValue}>{params.dosage}</Text></View>

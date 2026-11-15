@@ -6,6 +6,7 @@ import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { showErrorToast } from '@/lib/toastHelper';
+import { PersonField } from '@/components/PersonChips';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/StyledText';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -20,6 +21,8 @@ export default function AddAppointmentForm() {
   const fontSize = getFontSize(fontScale);
 
   const isEditing = !!params.id;
+  const [forPersonId, setForPersonId] = useState<string | null>(() => usePeopleStore.getState().activePersonId);
+  const editedAppointmentPersonId = useAppointmentStore((s) => s.appointments.find((a) => a.id === params.id)?.personId);
 
   const [formData, setFormData] = useState({
     id: params.id as string | undefined,
@@ -72,8 +75,7 @@ export default function AddAppointmentForm() {
     if (isEditing) {
       await updateAppointment(formData.id!, appointmentData);
     } else {
-      // A Task 8 troca a pessoa ativa pela escolha "Para:".
-      const personId = usePeopleStore.getState().activePersonId;
+      const personId = forPersonId;
       if (!personId) {
         showErrorToast('Cadastre uma pessoa antes de continuar.');
         return;
@@ -100,7 +102,11 @@ export default function AddAppointmentForm() {
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
-          {/* Campos do formulário ... */}
+          <PersonField
+            value={isEditing ? editedAppointmentPersonId : forPersonId}
+            onChange={setForPersonId}
+            readOnly={isEditing}
+          />
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Nome do Doutor(a) *</Text>
             <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, dynamicStyles.input]} value={formData.doctorName} onChangeText={(text) => setFormData(prev => ({ ...prev, doctorName: text }))} placeholder="Ex: Dra. Ana Costa"/>

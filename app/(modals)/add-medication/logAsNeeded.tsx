@@ -11,6 +11,7 @@ import { useMedicationSuggestionsStore } from '@/hooks/useMedicationSuggestionsS
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { PersonField } from '@/components/PersonChips';
 import { showErrorToast } from '@/lib/toastHelper';
 
 
@@ -43,6 +44,7 @@ export default function LogAsNeededScreen() {
   const { suggestions: learnedSuggestions } = useMedicationSuggestionsStore();
   const { fontScale } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [forPersonId, setForPersonId] = useState<string | null>(() => usePeopleStore.getState().activePersonId);
 
   const handleSelectMedication = async (item: ListItem) => {
     const existingMed = medications.find(m => m.name.toLowerCase() === item.name.toLowerCase());
@@ -60,8 +62,7 @@ export default function LogAsNeededScreen() {
           {
             text: 'Adicionar',
             onPress: async () => {
-              // A Task 8 troca a pessoa ativa pela escolha "Para:".
-              const personId = usePeopleStore.getState().activePersonId;
+              const personId = forPersonId;
               if (!personId) {
                 showErrorToast('Cadastre uma pessoa antes de continuar.');
                 return;
@@ -116,6 +117,9 @@ export default function LogAsNeededScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.forPerson}>
+        <PersonField value={forPersonId} onChange={setForPersonId} />
+      </View>
       <View style={styles.searchContainer}>
         <Search size={20} color={colors.textSecondary} style={styles.searchIcon} />
         <TextInput
@@ -146,6 +150,7 @@ export default function LogAsNeededScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  forPerson: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, marginBottom: -spacing.sm },
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cardBackground, borderRadius: 12, margin: spacing.lg, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border },
   searchIcon: { marginRight: spacing.sm },
   searchInput: { flex: 1, height: 50, fontSize: getFontSize('medium').md, color: colors.text },

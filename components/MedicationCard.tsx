@@ -91,7 +91,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
       <View style={styles.detailsContainer}>
         {person && (
           <View style={[styles.personBadge, { backgroundColor: person.color }]}>
-            <Text numberOfLines={1} style={{ fontSize: fontSize.sm, fontWeight: '600', color: getContentColorOn(person.color) }}>
+            <Text style={{ fontSize: fontSize.sm, fontWeight: '600', color: getContentColorOn(person.color) }}>
               {person.name}
             </Text>
           </View>
