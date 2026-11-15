@@ -5,3 +5,6 @@ export const ANAMNESIS_KEY = '@anamnesis';
 export const PROFILE_KEY = '@user_profile';
 export const FONT_SCALE_KEY = '@font_scale';
 export const MEDICATION_SUGGESTIONS_KEY = '@medication_suggestions';
+export const PEOPLE_KEY = '@people';
+export const ACTIVE_PERSON_KEY = '@active_person';
+export const DATA_VERSION_KEY = '@data_version';

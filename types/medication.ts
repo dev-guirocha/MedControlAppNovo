@@ -1,5 +1,19 @@
+/** Pessoa cuidada (o próprio usuário, pai, mãe...). */
+export interface Person {
+  id: string;
+  name: string;
+  color: string;
+  birthYear?: number;
+  gender?: UserProfile['gender'];
+  /** Marca a pessoa que é o próprio usuário do app. */
+  isSelf?: boolean;
+  createdAt: string;
+}
+
 export interface Medication {
   id: string;
+  /** Dono do remédio. Opcional por enquanto; a Task 5 torna obrigatório. */
+  personId?: string;
   name: string;
   dosage: string;
   color?: string;
@@ -14,11 +28,14 @@ export interface Medication {
   doctor?: string;
   createdAt: string;
   condition: string;
+  /** Quando o tratamento foi encerrado (ISO); ausente = em uso. */
+  endedAt?: string;
 }
 
 // ... (O resto do arquivo DoseHistory e UserProfile permanece igual)
 export interface DoseHistory {
   id: string;
+  personId?: string;
   doseId?: string;
   medicationId: string;
   medicationName: string;
@@ -42,6 +59,8 @@ export interface UserProfile {
 
 export interface Appointment {
   id: string;
+  /** Opcional por enquanto; a Task 5 torna obrigatório. */
+  personId?: string;
   doctorName: string;
   specialty: string;
   location: string;
