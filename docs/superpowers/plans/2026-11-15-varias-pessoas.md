@@ -98,7 +98,7 @@
   - paciente com 2 remédios, 3 doses, 1 consulta, anamnese objeto → 1 pessoa `{name: profile.name, isSelf:true, color: palette[0], birthYear, gender}`; todos os registros com `personId` dela; `anamnesis` = `{[id]: anamneseAntiga}`; `version:'2'`
   - cuidador → pessoa 1 com nome do perfil e **sem** `isSelf`
   - rodar `migrateToV2` sobre o resultado → saída idêntica (idempotente; não cria 2ª pessoa)
-  - snapshot vazio sem perfil → 1 pessoa `{name:'Eu'}`, coleções vazias, `anamnesis:{}`
+  - snapshot sem perfil (instalação nova, antes do onboarding) → `people: []`, coleções vazias, `anamnesis:{}`, `version:'2'` — quem cria a primeira pessoa é o onboarding (Task 10)
   - dose de remédio já excluído (medicationId órfão) → recebe `personId` da pessoa 1
   - registros que já têm `personId` válido não são alterados
 - [ ] **Step 2:** `npm test` → falha.
@@ -134,7 +134,7 @@
 - Produces:
   - `isScheduledOnDate` retorna `false` se `medication.endedAt` existe
   - `mergeMedicationUpdate(current: Medication, updates: Partial<Medication>): Medication` em `lib/schedule.ts` — nunca troca `personId`, `id`, `createdAt`; mantém `endedAt` se `updates` não o traz
-  - `useMedicationStore.addMedication(data: Omit<Medication,'id'|'createdAt'|'endedAt'>)` (exige `personId`)
+  - `useMedicationStore.addMedication(data: Omit<Medication,'id'|'createdAt'|'endedAt'>)` (o tipo de `personId` segue o de `Medication`: opcional até a Task 5)
   - `useMedicationStore.endMedication(id): Promise<void>` / `resumeMedication(id): Promise<void>`
   - `useMedicationStore.rescheduleAll(): Promise<void>`
   - `scheduleMedicationNotifications(med, { requestPermissions?, allowCatchUp?, personName: string | null })` e `scheduleStockNotification(med, { requestPermissions?, personName: string | null })`
