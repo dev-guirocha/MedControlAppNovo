@@ -40,19 +40,35 @@ function isOldAnamnesis(value: unknown): value is Anamnesis {
 export function migrateToV2(snapshot: DataSnapshot, deps: MigrationDeps): MigratedSnapshot {
   let people: Person[] = snapshot.people ?? [];
 
-  // Primeira pessoa nasce do perfil antigo; sem perfil (instalação nova) o onboarding cria depois.
-  if (people.length === 0 && snapshot.version !== '2' && snapshot.profile) {
+  // version '2' nunca cria pessoa de propósito (quem apagou todas não deve ser recriado;
+  // a Task 3 nem chama a função nesse caso).
+  const hasV1Data =
+    snapshot.medications.length > 0 ||
+    snapshot.doseHistory.length > 0 ||
+    snapshot.appointments.length > 0 ||
+    snapshot.anamnesis !== null;
+
+  if (people.length === 0 && snapshot.version !== '2' && (snapshot.profile || hasV1Data)) {
     const { profile } = snapshot;
+    // Sem perfil mas com dados (ex.: perfil ilegível): pessoa genérica 'Eu', sem isSelf,
+    // para não perder nem deixar sem dono os registros. Sem perfil e sem dados: onboarding cria.
     people = [
-      {
-        id: deps.newId(),
-        name: profile.name,
-        color: pickPersonColor([], deps.palette),
-        birthYear: profile.birthYear,
-        gender: profile.gender,
-        ...(profile.type === 'patient' ? { isSelf: true } : {}),
-        createdAt: deps.now(),
-      },
+      profile
+        ? {
+            id: deps.newId(),
+            name: profile.name,
+            color: pickPersonColor([], deps.palette),
+            birthYear: profile.birthYear,
+            gender: profile.gender,
+            ...(profile.type === 'patient' ? { isSelf: true } : {}),
+            createdAt: deps.now(),
+          }
+        : {
+            id: deps.newId(),
+            name: 'Eu',
+            color: pickPersonColor([], deps.palette),
+            createdAt: deps.now(),
+          },
     ];
   }
 

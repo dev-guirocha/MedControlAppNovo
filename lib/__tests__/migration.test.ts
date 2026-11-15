@@ -91,3 +91,25 @@ test('anamnese nula vira {}', () => {
   s.anamnesis = null;
   assert.deepEqual(migrateToV2(s, deps()).anamnesis, {});
 });
+
+test('sem perfil mas com dados v1: pessoa "Eu" sem isSelf recebe tudo', () => {
+  const r = migrateToV2(
+    {
+      version: null,
+      profile: null,
+      people: null,
+      medications: [med('m1')],
+      doseHistory: [dose('d1', 'm1')],
+      appointments: [],
+      anamnesis: anamnese,
+    },
+    deps(),
+  );
+  assert.equal(r.version, '2');
+  assert.equal(r.people.length, 1);
+  assert.equal(r.people[0].name, 'Eu');
+  assert.equal('isSelf' in r.people[0], false);
+  assert.equal(r.medications[0].personId, 'p1');
+  assert.equal(r.doseHistory[0].personId, 'p1');
+  assert.deepEqual(r.anamnesis, { p1: anamnese });
+});
