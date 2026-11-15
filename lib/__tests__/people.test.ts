@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildNotificationText,
+  needsRescheduleOnPeopleChange,
   pickPersonColor,
+  removePersonFromSnapshot,
   resolveActivePersonId,
   shouldShowPersonNames,
 } from '../people';
@@ -74,4 +76,35 @@ test('resolveActivePersonId', () => {
 test('shouldShowPersonNames só com 2 ou mais pessoas', () => {
   assert.equal(shouldShowPersonNames([a]), false);
   assert.equal(shouldShowPersonNames([a, b]), true);
+});
+
+test('removePersonFromSnapshot remove só os registros da pessoa e a chave da anamnese', () => {
+  const med = (id: string, personId: string) => ({ id, personId }) as never;
+  const dose = (id: string, personId: string) => ({ id, personId }) as never;
+  const appt = (id: string, personId: string) => ({ id, personId }) as never;
+  const result = removePersonFromSnapshot(
+    {
+      medications: [med('m1', 'a'), med('m2', 'b')],
+      doseHistory: [dose('d1', 'a'), dose('d2', 'b')],
+      appointments: [appt('c1', 'a'), appt('c2', 'b')],
+      anamnesis: { a: { id: 'x' } as never, b: { id: 'y' } as never },
+    },
+    'b',
+  );
+  assert.deepEqual(result.medications.map((m) => m.id), ['m1']);
+  assert.deepEqual(result.doseHistory.map((d) => d.id), ['d1']);
+  assert.deepEqual(result.appointments.map((c) => c.id), ['c1']);
+  assert.deepEqual(Object.keys(result.anamnesis as object), ['a']);
+});
+
+test('needsRescheduleOnPeopleChange', () => {
+  assert.equal(needsRescheduleOnPeopleChange([a], [a, b]), true);
+  assert.equal(needsRescheduleOnPeopleChange([a, b], [a]), true);
+  assert.equal(needsRescheduleOnPeopleChange([a, b], [a, b]), false);
+  assert.equal(needsRescheduleOnPeopleChange([a, b], [a, { ...b, name: 'Outro' }]), true);
+  assert.equal(needsRescheduleOnPeopleChange([a, b], [a, { ...b, color: '#999999' }]), false);
+});
+
+test('resolveActivePersonId cai na primeira quando a ativa foi excluída', () => {
+  assert.equal(resolveActivePersonId([a], b.id), a.id);
 });

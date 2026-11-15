@@ -26,6 +26,8 @@ interface MedicationState {
   resumeMedication: (id: string) => Promise<void>;
   rescheduleAll: () => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
+  /** Substitui a lista inteira (usado ao excluir uma pessoa). */
+  replaceAll: (medications: Medication[]) => Promise<void>;
   logDose: (medicationId: string, scheduledTime: Date, status: 'taken' | 'skipped') => Promise<void>;
 }
 
@@ -190,6 +192,16 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     } catch (error) {
       console.error('Error deleting medication:', error);
       showErrorToast('Erro ao excluir o medicamento.');
+    }
+  },
+
+  replaceAll: async (medications) => {
+    try {
+      set({ medications });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(medications));
+    } catch (error) {
+      console.error('Error replacing medications:', error);
+      showErrorToast('Erro ao salvar os medicamentos.');
     }
   },
 

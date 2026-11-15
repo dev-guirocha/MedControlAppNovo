@@ -1,3 +1,4 @@
+import type { DataSnapshot } from '@/lib/migration';
 import type { Person } from '@/types/medication';
 
 // Regras puras de pessoa (sem React Native nem stores) para poder testar fora do app.
@@ -45,4 +46,30 @@ export function buildNotificationText(input: {
     ? `${prefix}estoque baixo de ${medicationName}`
     : `Estoque baixo de ${medicationName}`;
   return { title, body: `Restam ${stock} unidades.` };
+}
+
+type PersonScopedSnapshot = Pick<DataSnapshot, 'medications' | 'doseHistory' | 'appointments' | 'anamnesis'>;
+
+/** Dados que sobram depois de excluir uma pessoa (cascata); a anamnese é o mapa por pessoa. */
+export function removePersonFromSnapshot(snapshot: PersonScopedSnapshot, personId: string): PersonScopedSnapshot {
+  let anamnesis = snapshot.anamnesis;
+  if (anamnesis && !('chronicConditions' in anamnesis)) {
+    const { [personId]: _removed, ...rest } = anamnesis as Record<string, unknown>;
+    anamnesis = rest as typeof anamnesis;
+  }
+  return {
+    medications: snapshot.medications.filter((m) => m.personId !== personId),
+    doseHistory: snapshot.doseHistory.filter((d) => d.personId !== personId),
+    appointments: snapshot.appointments.filter((c) => c.personId !== personId),
+    anamnesis,
+  };
+}
+
+/** Reagendar notificações quando o prefixo de nome muda: cruzou 1↔2+ pessoas ou alguém foi renomeado. */
+export function needsRescheduleOnPeopleChange(before: Person[], after: Person[]): boolean {
+  if (shouldShowPersonNames(before) !== shouldShowPersonNames(after)) return true;
+  return after.some((p) => {
+    const previous = before.find((q) => q.id === p.id);
+    return !!previous && previous.name !== p.name;
+  });
 }

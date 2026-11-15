@@ -11,6 +11,8 @@ interface AppointmentState {
   addAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt'>) => Promise<void>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
+  /** Substitui a lista inteira (usado ao excluir uma pessoa). */
+  replaceAll: (appointments: Appointment[]) => Promise<void>;
 }
 
 export const useAppointmentStore = create<AppointmentState>((set, get) => ({
@@ -54,6 +56,16 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     } catch (error) {
       console.error('Error updating appointment:', error);
       showErrorToast('Erro ao atualizar a consulta.');
+    }
+  },
+
+  replaceAll: async (appointments) => {
+    try {
+      set({ appointments });
+      await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+    } catch (error) {
+      console.error('Error replacing appointments:', error);
+      showErrorToast('Erro ao salvar as consultas.');
     }
   },
 

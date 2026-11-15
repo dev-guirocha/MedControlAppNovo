@@ -54,6 +54,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const updatedProfile = { ...currentProfile, ...updates };
       await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
       set({ userProfile: updatedProfile });
+
+      // Mantém a pessoa "eu" em sincronia com o perfil. Import dinâmico evita ciclo
+      // (personActions importa stores).
+      if (
+        updatedProfile.name !== currentProfile.name ||
+        updatedProfile.birthYear !== currentProfile.birthYear ||
+        updatedProfile.gender !== currentProfile.gender
+      ) {
+        const { syncSelfPersonFromProfile } = await import('@/lib/personActions');
+        await syncSelfPersonFromProfile(updatedProfile);
+      }
     } catch (error) { 
       console.error('Error updating user profile:', error); 
       showErrorToast('Erro ao atualizar o perfil.');
