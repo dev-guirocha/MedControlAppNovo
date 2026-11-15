@@ -6,6 +6,8 @@ export interface Medication {
   form: 'comprimido' | 'cápsula' | 'líquido' | 'injeção' | 'pomada' | 'gotas';
   frequency: 'diária' | 'a cada 8h' | 'a cada 12h' | 'semanal' | 'quando necessário';
   times: string[];
+  /** Só para frequência 'semanal': dias da semana, 0 = domingo … 6 = sábado. */
+  weekdays?: number[];
   stock: number;
   stockAlertThreshold: number; // <-- NOVO CAMPO ADICIONADO AQUI
   instructions?: string;

@@ -9,6 +9,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import type { Theme } from 'react-native-calendars/src/types';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
+import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -34,7 +35,7 @@ const HistoryItem = ({ item, fontSize }: { item: DoseHistory, fontSize: any }) =
         <View style={styles.itemHeader}>
           <Text style={[styles.itemName, { fontSize: fontSize.md }]}>{item.medicationName}</Text>
           <View style={[styles.statusBadge, statusStyle]}>
-            <Text style={styles.statusBadgeText}>{statusLabel}</Text>
+            <Text style={[styles.statusBadgeText, { fontSize: fontSize.xs }]}>{statusLabel}</Text>
           </View>
         </View>
         <Text style={[styles.itemTime, { fontSize: fontSize.sm }]}>
@@ -52,6 +53,7 @@ export default function HistoryScreen() {
   const { doseHistory } = useDoseHistoryStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
+  const tabBarSpace = useTabBarSpace();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const markedDates = useMemo(() => {
@@ -110,14 +112,15 @@ export default function HistoryScreen() {
       textDayFontWeight: '500',
       textMonthFontWeight: 'bold',
       textDayHeaderFontWeight: '600',
-      textDayFontSize: 16,
-      textMonthFontSize: 18,
-      textDayHeaderFontSize: 14,
+      textDayFontSize: fontSize.md,
+      textMonthFontSize: fontSize.lg,
+      textDayHeaderFontSize: fontSize.sm,
   };
   
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Calendar
+        key={fontScale} // o calendário só lê o tema na montagem
         onDayPress={day => setSelectedDate(day.dateString)}
         markedDates={markedDates}
         theme={calendarTheme}
@@ -133,7 +136,7 @@ export default function HistoryScreen() {
             data={selectedDayHistory}
             keyExtractor={(item) => item.id}
             renderItem={({item}) => <HistoryItem item={item} fontSize={fontSize} />}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarSpace }]}
         />
       )}
     </SafeAreaView>

@@ -1,7 +1,7 @@
 {
   "name": "medcontrolapp",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "start:dev-client": "expo start --dev-client",
@@ -29,6 +29,7 @@
     "expo-sharing": "~55.0.18",
     "expo-splash-screen": "~55.0.18",
     "expo-status-bar": "~55.0.5",
+    "expo-task-manager": "~55.0.20",
     "expo-updates": "~55.0.20",
     "lucide-react-native": "^0.395.0",
     "react": "19.2.0",

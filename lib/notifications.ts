@@ -1,9 +1,17 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { DailyTriggerInput, NotificationResponse } from 'expo-notifications';
+import type { NotificationResponse, NotificationTriggerInput } from 'expo-notifications';
 
 import { colors } from '@/constants/theme';
 import { Medication } from '@/types/medication';
+import {
+  expandMedicationTimes,
+  getMedicationWeekdays,
+  getReminderSlot,
+  isScheduledOnDate,
+  parseTime,
+  resolveDoseDateFromNotification,
+} from '@/lib/schedule';
 
 const MEDICATION_REMINDER_CATEGORY_ID = 'medication-reminder';
 const STOCK_ALERT_CATEGORY_ID = 'stock-alert'; // Categoria para o alerta de estoque
@@ -12,6 +20,8 @@ const MEDICATION_NOTIFICATION_IDS_KEY = 'medication_notification_ids';
 const IOS_NOTIFICATIONS_TEMPORARILY_DISABLED = Platform.OS === 'ios';
 const DOSE_TAKEN_ACTION_ID = 'dose-taken';
 const DOSE_SKIPPED_ACTION_ID = 'dose-skipped';
+// Canal criado em ensureNotificationsInitialized; sem ele o Android usa o canal genérico do Expo.
+const ANDROID_CHANNEL_ID = 'default';
 let notificationsInitializationPromise: Promise<void> | null = null;
 
 async function getNotificationsModule() {
@@ -30,8 +40,10 @@ async function setupNotificationCategories() {
 
   // Categoria para lembrete de dose (com ações "Tomei" e "Pulei")
   await Notifications.setNotificationCategoryAsync(MEDICATION_REMINDER_CATEGORY_ID, [
-    { identifier: DOSE_TAKEN_ACTION_ID, buttonTitle: 'Tomei ✅', options: { opensAppToForeground: true } },
-    { identifier: DOSE_SKIPPED_ACTION_ID, buttonTitle: 'Pulei ❌', options: { opensAppToForeground: true, isDestructive: true } },
+  // Os botões registram a dose em segundo plano (lib/doseNotificationActions.ts), sem abrir o app.
+  // Tocar no corpo da notificação continua abrindo o app normalmente.
+    { identifier: DOSE_TAKEN_ACTION_ID, buttonTitle: 'Tomei ✅', options: { opensAppToForeground: false } },
+    { identifier: DOSE_SKIPPED_ACTION_ID, buttonTitle: 'Pulei ❌', options: { opensAppToForeground: false, isDestructive: true } },
   ]);
 
   // Categoria simples para o alerta de estoque (sem ações)
@@ -66,7 +78,7 @@ async function ensureNotificationsInitialized() {
     });
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
+      await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
@@ -95,6 +107,8 @@ export function getMedicationActionFromNotificationResponse(response: Notificati
   const data = request.content.data as {
     medicationId?: string;
     scheduledTime?: string;
+    reminderLeadMinutes?: number;
+    catchUpReminder?: boolean;
   };
 
   const status = getDoseStatusFromActionIdentifier(actionIdentifier);
@@ -102,7 +116,10 @@ export function getMedicationActionFromNotificationResponse(response: Notificati
     return null;
   }
 
-  const scheduledDate = buildScheduledDateFromTime(data.scheduledTime);
+  // O dia da dose vem do momento em que o lembrete disparou, não de quando o usuário tocou nele.
+  const firedAt = new Date(response.notification.date || Date.now());
+  const leadMinutes = data.catchUpReminder ? 0 : (data.reminderLeadMinutes ?? REMINDER_LEAD_MINUTES);
+  const scheduledDate = resolveDoseDateFromNotification(data.scheduledTime, firedAt, leadMinutes);
   if (!scheduledDate) {
     return null;
   }
@@ -181,7 +198,7 @@ export async function cleanupOrphanedMedicationNotifications(medications: Medica
 
 export async function scheduleMedicationNotifications(
   medication: Medication,
-  options: { requestPermissions?: boolean } = {}
+  options: { requestPermissions?: boolean; allowCatchUp?: boolean } = {}
 ) {
   const Notifications = await getNotificationsModule();
   if (!Notifications) {
@@ -203,28 +220,52 @@ export async function scheduleMedicationNotifications(
 
   const scheduledIds: string[] = [];
 
-  for (const time of medication.times) {
-    const trigger = getReminderTriggerForTime(time);
-    const identifier = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `Em ${REMINDER_LEAD_MINUTES} min: ${medication.name}`,
-        body: `Dose agendada para ${time}. Toque para ver detalhes ou registrar a dose.`,
-        subtitle: `Lembrete de Medicamento 💊`,
-        sound: 'default',
-        data: {
-          medicationId: medication.id,
-          scheduledTime: time,
-          reminderLeadMinutes: REMINDER_LEAD_MINUTES,
+  const weekdays: (number | null)[] = medication.frequency === 'semanal' ? getMedicationWeekdays(medication) : [null];
+  const now = new Date();
+
+  for (const time of expandMedicationTimes(medication)) {
+    for (const weekday of weekdays) {
+      const slot = getReminderSlot(time, REMINDER_LEAD_MINUTES, weekday);
+      if (!slot) continue;
+
+      const trigger: NotificationTriggerInput = slot.weekday === null
+        ? {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            channelId: ANDROID_CHANNEL_ID,
+            hour: slot.hour,
+            minute: slot.minute,
+          }
+        : {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            channelId: ANDROID_CHANNEL_ID,
+            weekday: slot.weekday + 1, // Expo: 1 = domingo; JS: 0 = domingo
+            hour: slot.hour,
+            minute: slot.minute,
+          };
+
+      const identifier = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Em ${REMINDER_LEAD_MINUTES} min: ${medication.name}`,
+          body: `Dose agendada para ${time}. Toque para ver detalhes ou registrar a dose.`,
+          subtitle: `Lembrete de Medicamento 💊`,
+          sound: 'default',
+          data: {
+            medicationId: medication.id,
+            scheduledTime: time,
+            reminderLeadMinutes: REMINDER_LEAD_MINUTES,
+          },
+          categoryIdentifier: MEDICATION_REMINDER_CATEGORY_ID,
+          color: medication.color || colors.primary,
         },
-        categoryIdentifier: MEDICATION_REMINDER_CATEGORY_ID,
-        color: medication.color || colors.primary,
-      },
-      trigger,
-    });
+        trigger,
+      });
 
-    scheduledIds.push(identifier);
+      scheduledIds.push(identifier);
+    }
 
-    if (shouldScheduleCatchUpReminder(time)) {
+    // Lembrete imediato só quando o usuário acabou de cadastrar/editar dentro da janela
+    // de antecedência — nunca ao simplesmente abrir o app (gerava notificação duplicada).
+    if (options.allowCatchUp && isScheduledOnDate(medication, now) && shouldScheduleCatchUpReminder(time, now)) {
       const catchUpIdentifier = await Notifications.scheduleNotificationAsync({
         content: {
           title: `Agora: ${medication.name}`,
@@ -242,6 +283,7 @@ export async function scheduleMedicationNotifications(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          channelId: ANDROID_CHANNEL_ID,
           seconds: 2,
         },
       });
@@ -323,6 +365,7 @@ export async function scheduleStockNotification(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          channelId: ANDROID_CHANNEL_ID,
           seconds: 1, // Envia imediatamente quando o estoque for atualizado
         },
       });
@@ -333,18 +376,6 @@ export async function scheduleStockNotification(
   } else {
     console.log(`✅ Estoque suficiente (${medication.stock}) para: ${medication.name}`);
   }
-}
-
-function getReminderTriggerForTime(time: string): DailyTriggerInput {
-  const [hour, minute] = time.split(':').map(Number);
-  const totalMinutes = hour * 60 + minute - REMINDER_LEAD_MINUTES;
-  const normalizedMinutes = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
-
-  return {
-    type: 'daily' as DailyTriggerInput['type'],
-    hour: Math.floor(normalizedMinutes / 60),
-    minute: normalizedMinutes % 60,
-  };
 }
 
 function getDoseStatusFromActionIdentifier(actionIdentifier: string) {
@@ -359,17 +390,6 @@ function getDoseStatusFromActionIdentifier(actionIdentifier: string) {
   return null;
 }
 
-function buildScheduledDateFromTime(time: string, referenceDate = new Date()) {
-  const [hour, minute] = time.split(':').map(Number);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
-    return null;
-  }
-
-  const scheduledDate = new Date(referenceDate);
-  scheduledDate.setHours(hour, minute, 0, 0);
-  return scheduledDate;
-}
-
 function shouldScheduleCatchUpReminder(time: string, referenceDate = new Date()) {
   const { doseDate, reminderDate } = getDoseAndReminderDates(time, referenceDate);
 
@@ -377,9 +397,9 @@ function shouldScheduleCatchUpReminder(time: string, referenceDate = new Date())
 }
 
 function getDoseAndReminderDates(time: string, referenceDate = new Date()) {
-  const [hour, minute] = time.split(':').map(Number);
+  const parsed = parseTime(time) ?? { h: 0, m: 0 };
   const doseDate = new Date(referenceDate);
-  doseDate.setHours(hour, minute, 0, 0);
+  doseDate.setHours(parsed.h, parsed.m, 0, 0);
 
   const reminderDate = new Date(doseDate.getTime() - REMINDER_LEAD_MINUTES * 60 * 1000);
 

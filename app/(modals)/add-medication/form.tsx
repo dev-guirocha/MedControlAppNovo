@@ -11,7 +11,7 @@ import {
     ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors, getFontSize, spacing, medicationColors } from '@/constants/theme';
+import { colors, getContentColorOn, getFontSize, spacing, medicationColors } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { ChevronDown, X, Sun, Moon, CloudSun, Check } from 'lucide-react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -20,6 +20,7 @@ import { useAuthStore } from '@/hooks/useAuthStore';
 import type { FontScale } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import type { Medication } from '@/types/medication';
+import { normalizeWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
 const FORMS = ['comprimido', 'cápsula', 'líquido', 'injeção', 'pomada', 'gotas'];
 const FREQUENCIES = ['diária', 'a cada 8h', 'a cada 12h', 'semanal', 'quando necessário'];
@@ -32,6 +33,7 @@ type MedicationFormState = {
     form: Medication['form'];
     frequency: Medication['frequency'];
     times: string[];
+    weekdays: number[];
     stock: string;
     stockAlertThreshold: string;
     instructions: string;
@@ -104,6 +106,11 @@ export default function MedicationFormScreen() {
         return ['08:00'];
     };
 
+    const toWeekdaysParam = (value: unknown): number[] => {
+        const parsed = normalizeWeekdays(Array.isArray(value) ? value.join(',') : value);
+        return parsed.length > 0 ? parsed : [new Date().getDay()];
+    };
+
     const buildFormStateFromParams = (): MedicationFormState => {
         const initialId = toStringParam(params.id);
         const initialSelectedName = toStringParam(params.selectedName);
@@ -116,6 +123,7 @@ export default function MedicationFormScreen() {
             form: (toStringParam(params.form, 'comprimido') as Medication['form']),
             frequency: (toStringParam(params.frequency, 'diária') as Medication['frequency']),
             times: toTimesParam(params.times),
+            weekdays: toWeekdaysParam(params.weekdays),
             stock: toStringParam(params.stock),
             stockAlertThreshold: toStringParam(params.stockAlertThreshold),
             instructions: toStringParam(params.instructions),
@@ -134,6 +142,7 @@ export default function MedicationFormScreen() {
         form: params.form,
         frequency: params.frequency,
         times: params.times,
+        weekdays: params.weekdays,
         stock: params.stock,
         stockAlertThreshold: params.stockAlertThreshold,
         instructions: params.instructions,
@@ -182,6 +191,13 @@ export default function MedicationFormScreen() {
         }
         closePicker();
     };
+    const toggleWeekday = (day: number) =>
+        setFormData((prev) => ({
+            ...prev,
+            weekdays: prev.weekdays.includes(day)
+                ? prev.weekdays.filter((item) => item !== day)
+                : [...prev.weekdays, day].sort((a, b) => a - b),
+        }));
     const handleSelectColor = (color: string) => setFormData((prev) => ({ ...prev, color }));
     const onTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
         const currentDate = selectedDate || tempTime;
@@ -222,9 +238,13 @@ export default function MedicationFormScreen() {
             ...formData,
             id: formData.id || undefined,
         };
-        router.push({ pathname: '/(modals)/add-medication/confirm', params: { ...normalizedFormData, times: formData.times } as any });
+        router.push({
+            pathname: '/(modals)/add-medication/confirm',
+            params: { ...normalizedFormData, times: formData.times, weekdays: formData.weekdays.join(',') } as any,
+        });
     };
-    const isValid = !!(formData.name.trim() && formData.dosage.trim() && formData.stock.trim() && formData.stockAlertThreshold.trim());
+    const weekdaysValid = formData.frequency !== 'semanal' || formData.weekdays.length > 0;
+    const isValid = !!(formData.name.trim() && formData.dosage.trim() && formData.stock.trim() && formData.stockAlertThreshold.trim()) && weekdaysValid;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -232,21 +252,46 @@ export default function MedicationFormScreen() {
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Nome do Medicamento *</Text>
-                        <TouchableOpacity style={styles.picker} onPress={() => router.push({pathname: '/(modals)/add-medication/search', params: formData })}>
+                        <TouchableOpacity style={styles.picker} onPress={() => router.push({pathname: '/(modals)/add-medication/search', params: { ...formData, weekdays: formData.weekdays.join(',') } as any })}>
                             <Text style={[{fontSize: fontSize.lg}, !formData.name && styles.placeholderText]}>{formData.name || 'Clique para buscar'}</Text>
                             <ChevronDown size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Dosagem *</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.dosage} onChangeText={(text) => setFormData(prev => ({ ...prev, dosage: text }))} placeholder="Ex: 500mg ou 1 comprimido"/></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Dosagem *</Text><TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, {fontSize: fontSize.lg}]} value={formData.dosage} onChangeText={(text) => setFormData(prev => ({ ...prev, dosage: text }))} placeholder="Ex: 500mg ou 1 comprimido"/></View>
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Para que é este medicamento? (Opcional)</Text>
-                        <TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.condition} onChangeText={(text) => setFormData(prev => ({ ...prev, condition: text }))} placeholder="Ex: Dor de cabeça, Hipertensão"/>
+                        <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, {fontSize: fontSize.lg}]} value={formData.condition} onChangeText={(text) => setFormData(prev => ({ ...prev, condition: text }))} placeholder="Ex: Dor de cabeça, Hipertensão"/>
                     </View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Cor de Identificação</Text><View style={styles.colorSelectorContainer}>{medicationColors.map(color => (<TouchableOpacity key={color} style={[styles.colorOption, { backgroundColor: color }]} onPress={() => handleSelectColor(color)}>{formData.color === color && <Check size={24} color={colors.textInverse} />}</TouchableOpacity>))}</View></View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Médico(a) (Opcional)</Text><TextInput style={[styles.input, {fontSize: fontSize.lg}]} value={formData.doctor} onChangeText={(text) => setFormData(prev => ({ ...prev, doctor: text }))} placeholder="Ex: Dr. Carlos Andrade"/></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Cor de Identificação</Text><View style={styles.colorSelectorContainer}>{medicationColors.map(color => (<TouchableOpacity key={color} style={[styles.colorOption, { backgroundColor: color }]} onPress={() => handleSelectColor(color)}>{formData.color === color && <Check size={24} color={getContentColorOn(color)} />}</TouchableOpacity>))}</View></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Médico(a) (Opcional)</Text><TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, {fontSize: fontSize.lg}]} value={formData.doctor} onChangeText={(text) => setFormData(prev => ({ ...prev, doctor: text }))} placeholder="Ex: Dr. Carlos Andrade"/></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Forma *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Forma', FORMS, handleSelectForm)}><Text style={{fontSize: fontSize.lg}}>{formData.form}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
                     <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Frequência *</Text><TouchableOpacity style={styles.picker} onPress={() => openPicker('Selecione a Frequência', FREQUENCIES, handleSelectFrequency)}><Text style={{fontSize: fontSize.lg}}>{formData.frequency}</Text><ChevronDown size={20} color={colors.textSecondary} /></TouchableOpacity></View>
-                    
+
+                    {formData.frequency === 'semanal' && (
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, {fontSize: fontSize.md}]}>Dias da semana *</Text>
+                            <View style={styles.weekdayContainer}>
+                                {WEEKDAY_LABELS.map((label, day) => {
+                                    const selected = formData.weekdays.includes(day);
+                                    return (
+                                        <TouchableOpacity
+                                            key={label}
+                                            style={[styles.weekdayChip, selected && styles.weekdayChipSelected]}
+                                            onPress={() => toggleWeekday(day)}
+                                            accessibilityRole="checkbox"
+                                            accessibilityState={{ checked: selected }}
+                                        >
+                                            <Text style={[styles.weekdayText, selected && styles.weekdayTextSelected]}>{label}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                            {!weekdaysValid && (
+                                <Text style={[styles.helperText, { color: colors.danger }]}>Escolha pelo menos um dia.</Text>
+                            )}
+                        </View>
+                    )}
+
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>
                             {showMultipleTimes ? 'Horários *' : 'Horário da Primeira Dose *'}
@@ -279,7 +324,7 @@ export default function MedicationFormScreen() {
 
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Estoque Inicial *</Text>
-                        <TextInput
+                        <TextInput placeholderTextColor={colors.textSecondary}
                             style={[styles.input, {fontSize: fontSize.lg}]}
                             value={String(formData.stock)}
                             onChangeText={(text) => setFormData(prev => ({ ...prev, stock: text.replace(/[^0-9]/g, '') }))}
@@ -292,7 +337,7 @@ export default function MedicationFormScreen() {
                     </View>
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, {fontSize: fontSize.md}]}>Limite para Alerta de Estoque *</Text>
-                        <TextInput
+                        <TextInput placeholderTextColor={colors.textSecondary}
                             style={[styles.input, {fontSize: fontSize.lg}]}
                             value={String(formData.stockAlertThreshold)}
                             onChangeText={(text) => setFormData(prev => ({ ...prev, stockAlertThreshold: text.replace(/[^0-9]/g, '') }))}
@@ -306,7 +351,7 @@ export default function MedicationFormScreen() {
                             <Text style={[styles.helperText, { color: colors.danger }]}>O limite de alerta deve ser menor que o estoque inicial.</Text>
                         )}
                     </View>
-                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Instruções Especiais (Opcional)</Text><TextInput style={[styles.input, styles.textArea, {fontSize: fontSize.lg}]} value={formData.instructions} onChangeText={(text) => setFormData(prev => ({ ...prev, instructions: text }))} placeholder="Ex: Tomar com alimentos" multiline/></View>
+                    <View style={styles.inputGroup}><Text style={[styles.label, {fontSize: fontSize.md}]}>Instruções Especiais (Opcional)</Text><TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, styles.textArea, {fontSize: fontSize.lg}]} value={formData.instructions} onChangeText={(text) => setFormData(prev => ({ ...prev, instructions: text }))} placeholder="Ex: Tomar com alimentos" multiline/></View>
                 </View>
             </KeyboardAwareScrollView>
             
@@ -345,6 +390,11 @@ const styles = StyleSheet.create({
     presetContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: spacing.md },
     presetButton: { alignItems: 'center', padding: spacing.sm, backgroundColor: colors.cardBackground, borderRadius: 8, borderWidth: 1, borderColor: colors.border, flex: 1, marginHorizontal: spacing.xs },
     presetText: { color: colors.primary, marginTop: spacing.xs },
+    weekdayContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
+    weekdayChip: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: 8, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.cardBackground },
+    weekdayChipSelected: { borderColor: colors.primary, backgroundColor: colors.primary },
+    weekdayText: { color: colors.text, fontWeight: '500' },
+    weekdayTextSelected: { color: colors.textInverse },
     colorSelectorContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'space-between', marginTop: spacing.sm },
     colorOption: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     modalBackdrop: { flex: 1, backgroundColor: colors.overlay },

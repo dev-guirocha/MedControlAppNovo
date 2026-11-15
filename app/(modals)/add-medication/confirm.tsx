@@ -7,6 +7,7 @@ import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { Check, X } from 'lucide-react-native';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
+import { normalizeWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
 export default function ConfirmMedicationScreen() {
   const router = useRouter();
@@ -24,6 +25,9 @@ export default function ConfirmMedicationScreen() {
     );
   }
 
+  const weekdaysParam = Array.isArray(params.weekdays) ? params.weekdays.join(',') : params.weekdays;
+  const weekdaysLabel = normalizeWeekdays(weekdaysParam).map((day) => WEEKDAY_LABELS[day]).join(', ');
+
   const handleConfirm = async () => {
     setLoading(true);
     const medicationData = {
@@ -34,6 +38,7 @@ export default function ConfirmMedicationScreen() {
       form: params.form as any,
       frequency: params.frequency as any,
       times: Array.isArray(params.times) ? params.times as string[] : [params.times as string],
+      weekdays: params.frequency === 'semanal' ? normalizeWeekdays(weekdaysParam) : undefined,
       stock: parseInt(params.stock as string),
       stockAlertThreshold: parseInt(params.stockAlertThreshold as string),
       instructions: params.instructions as string,
@@ -77,6 +82,7 @@ export default function ConfirmMedicationScreen() {
             <View style={styles.divider} />
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Forma</Text><Text style={dynamicStyles.fieldValue}>{params.form}</Text></View><View style={styles.divider} />
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Frequência</Text><Text style={dynamicStyles.fieldValue}>{params.frequency}</Text></View><View style={styles.divider} />
+            {params.frequency === 'semanal' && (<><View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Dias da semana</Text><Text style={dynamicStyles.fieldValue}>{weekdaysLabel}</Text></View><View style={styles.divider} /></>)}
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Horários</Text><Text style={dynamicStyles.fieldValue}>{Array.isArray(params.times) ? params.times.join(', ') : params.times}</Text></View><View style={styles.divider} />
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Estoque</Text><Text style={dynamicStyles.fieldValue}>{params.stock} unidades</Text></View><View style={styles.divider} />
             <View style={styles.field}><Text style={dynamicStyles.fieldLabel}>Limite para Alerta</Text><Text style={dynamicStyles.fieldValue}>{params.stockAlertThreshold} unidades</Text></View>

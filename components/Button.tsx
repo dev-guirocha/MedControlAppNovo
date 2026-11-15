@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { icons } from 'lucide-react-native';
-import { colors } from '@/constants/theme';
+import { colors, getFontSize } from '@/constants/theme';
+import { useAuthStore } from '@/hooks/useAuthStore';
 import { ButtonProps } from '@/types/button';
 
 export function Button({
@@ -15,6 +16,9 @@ export function Button({
   style,
   ...props
 }: ButtonProps) {
+  const fontScale = useAuthStore((state) => state.fontScale);
+  const scaledFont = getFontSize(fontScale);
+  const textSize = size === 'small' ? scaledFont.sm : size === 'large' ? scaledFont.lg : scaledFont.md;
   const isDisabled = disabled || loading;
   const isSecondary = variant === 'secondary';
   const isSuccess = variant === 'success';
@@ -43,6 +47,7 @@ export function Button({
     isDisabled && styles.disabledText,
     size === 'small' && styles.smallText,
     size === 'large' && styles.largeText,
+    { fontSize: textSize },
   ];
 
   const iconColor = isSecondary ? colors.text : isSuccess ? colors.background : colors.textInverse;

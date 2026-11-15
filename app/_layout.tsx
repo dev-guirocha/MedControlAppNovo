@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
+import { AppState } from "react-native";
 import type { NotificationResponse } from 'expo-notifications';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,7 +12,8 @@ import { useMedicationSuggestionsStore } from "@/hooks/useMedicationSuggestionsS
 import { useDoseHistoryStore } from "@/hooks/useDoseHistoryStore";
 import { useAppointmentStore } from "@/hooks/useAppointmentStore";
 import { useAnamnesisStore } from "@/hooks/useAnamnesisStore";
-import { getMedicationActionFromNotificationResponse, initializeNotificationsAsync } from "@/lib/notifications";
+import { initializeNotificationsAsync } from "@/lib/notifications";
+import { handleDoseActionResponse, hydrateDoseStoresFromStorage, registerDoseActionTaskAsync } from "@/lib/doseNotificationActions";
 import { colors } from '@/constants/theme';
 import { StatusBar } from 'expo-status-bar';
 
@@ -51,31 +53,17 @@ export default function RootLayout() {
   const { loadAppointments } = useAppointmentStore();
   const { loadAnamnesis } = useAnamnesisStore();
   const { stopLoading } = useAppLoadingStore();
-  const handledNotificationResponsesRef = useRef(new Set<string>());
 
   useEffect(() => {
     const initializeApp = async () => {
       let responseSubscription: { remove: () => void } | null = null;
+      let appStateSubscription: { remove: () => void } | null = null;
 
+      // Dedupe e reidratação ficam em handleDoseActionResponse: o mesmo toque pode chegar
+      // pela task em segundo plano e por este listener.
       const handleNotificationResponse = async (response: NotificationResponse) => {
-        const responseKey = `${response.notification.request.identifier}:${response.actionIdentifier}`;
-        if (handledNotificationResponsesRef.current.has(responseKey)) {
-          return;
-        }
-
-        handledNotificationResponsesRef.current.add(responseKey);
-
-        const medicationAction = getMedicationActionFromNotificationResponse(response);
-        if (!medicationAction) {
-          return;
-        }
-
         try {
-          await useMedicationStore.getState().logDose(
-            medicationAction.medicationId,
-            medicationAction.scheduledDate,
-            medicationAction.status
-          );
+          await handleDoseActionResponse(response);
         } catch (error) {
           console.error('Error handling medication notification action:', error);
         }
@@ -94,6 +82,22 @@ export default function RootLayout() {
           loadAnamnesis(),
         ]);
 
+        try {
+          await registerDoseActionTaskAsync();
+        } catch (error) {
+          console.error('Error registering dose action task:', error);
+        }
+
+        // Dose registrada pela notificação com o app em segundo plano pode ter sido gravada
+        // por outro runtime JS: ao voltar para a frente, relê o disco.
+        appStateSubscription = AppState.addEventListener('change', (state) => {
+          if (state === 'active') {
+            void hydrateDoseStoresFromStorage().catch((error) =>
+              console.error('Error refreshing doses on resume:', error)
+            );
+          }
+        });
+
         responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
           void handleNotificationResponse(response);
         });
@@ -111,6 +115,7 @@ export default function RootLayout() {
 
       return () => {
         responseSubscription?.remove();
+        appStateSubscription?.remove();
       };
     };
 

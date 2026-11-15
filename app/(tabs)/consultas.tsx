@@ -9,6 +9,7 @@ import { useAuthStore } from '@/hooks/useAuthStore';
 import { Appointment } from '@/types/medication';
 import { Text } from '@/components/StyledText';
 import { Receipt, Stethoscope, MapPin, Calendar, Edit, Trash2 } from 'lucide-react-native';
+import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 
 // Card da Consulta (sem lógica de arrastar)
 const AppointmentItem = React.memo(({ item, onEdit, onViewRecipe }: { item: Appointment; onEdit: (item: Appointment) => void; onViewRecipe: (recipeUri: string) => void; }) => {
@@ -109,6 +110,7 @@ const SwipeableAppointmentItem = ({ item, onEdit, onDelete, onViewRecipe }: { it
 export default function ConsultasScreen() {
   const router = useRouter();
   const { appointments, deleteAppointment } = useAppointmentStore();
+  const tabBarSpace = useTabBarSpace();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const [selectedRecipeUri, setSelectedRecipeUri] = useState<string | null>(null);
@@ -145,7 +147,7 @@ export default function ConsultasScreen() {
   
   if (appointments.length === 0) {
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.container} edges={[]}>
             <View style={styles.emptyState}>
               <Stethoscope size={64} color={colors.disabled}/>
               <Text style={[styles.emptyTitle, {fontSize: fontSize.xl}]}>Nenhuma consulta agendada</Text>
@@ -156,7 +158,7 @@ export default function ConsultasScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <SectionList
         sections={sections}
         keyExtractor={item => item.id}
@@ -173,7 +175,7 @@ export default function ConsultasScreen() {
             <Text style={[styles.sectionHeader, {fontSize: fontSize.lg}]}>{title}</Text>
         )}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: tabBarSpace }}
       />
 
       <Modal

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { colors, getFontSize, spacing } from '@/constants/theme';
+import { colors, getContentColorOn, getFontSize, spacing } from '@/constants/theme';
 import { Pill, Clock, AlertTriangle } from 'lucide-react-native';
 import { ScheduledDose, Medication } from '@/types/medication';
 import { useAuthStore } from '@/hooks/useAuthStore';
@@ -56,7 +56,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
-        <Pill size={24} color={colors.textInverse} />
+        <Pill size={24} color={getContentColorOn(iconColor)} />
       </View>
       <View style={styles.detailsContainer}>
         <Text style={dynamicStyles.medicationName}>{medication.name}</Text>

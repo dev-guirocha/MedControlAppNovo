@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView, ColorValue, Image } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote, Stethoscope } from 'lucide-react-native';
+import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 import { Text } from '@/components/StyledText';
 
 // --- Componentes Reutilizáveis para a Lista ---
@@ -33,16 +34,16 @@ const SettingsItem: React.FC<SettingsItemProps> = ({ icon: Icon, text, onPress }
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userProfile, saveUserProfile } = useAuthStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const userInitial = userProfile?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
-  const floatingTabBarOffset = Math.max(insets.bottom, 12) + 64 + spacing.lg;
+  const tabBarSpace = useTabBarSpace();
 
   const handleLogout = () => {
-    Alert.alert('Sair da Conta', 'Tem certeza que deseja sair?',
-      [{ text: 'Cancelar' }, { text: 'Sair', style: 'destructive',
+    // Não existe conta: isto só reabre o cadastro inicial. Os dados ficam no aparelho.
+    Alert.alert('Refazer configuração inicial', 'Você vai passar de novo pelas telas de boas-vindas. Seus medicamentos, histórico e consultas continuam salvos neste aparelho.',
+      [{ text: 'Cancelar', style: 'cancel' }, { text: 'Refazer',
           onPress: async () => {
             if (userProfile) {
               await saveUserProfile({ ...userProfile, onboardingCompleted: false });
@@ -68,7 +69,7 @@ export default function ProfileScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Cabeçalho do Perfil */}
       <View style={styles.profileHeader}>
         {userProfile.photoUrl ? (
@@ -87,7 +88,7 @@ export default function ProfileScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: spacing.lg }}
+        contentContainerStyle={{ paddingBottom: tabBarSpace }}
       >
         <View style={styles.section}>
             <Text style={dynamicStyles.sectionTitle}>CONTA</Text>
@@ -118,11 +119,11 @@ export default function ProfileScreen() {
                 <SettingsItem text="Termos de Serviço" icon={FileType} onPress={() => router.push('/policy/terms')} />
             </View>
         </View>
+        {/* Dentro da rolagem: fixo no rodapé, cobria "Política de Privacidade". */}
+        <View style={styles.section}>
+          <Button title="Refazer configuração inicial" variant="secondary" onPress={handleLogout} />
+        </View>
       </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: floatingTabBarOffset }]}>
-        <Button title="Sair da Conta" variant="danger" onPress={handleLogout} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -147,11 +148,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
-  },
-  footer: {
-    padding: spacing.lg,
-    paddingTop: 0,
-    backgroundColor: colors.background,
   },
   section: { marginBottom: spacing.lg },
   card: { backgroundColor: colors.cardBackground, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },

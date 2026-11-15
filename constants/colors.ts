@@ -7,7 +7,10 @@ export const colors = {
   surfaceMuted: '#0B1627',
   text: '#F3F7FF',
   textSecondary: '#94A3B8',
-  textInverse: '#F8FAFC',
+  // Conteúdo sobre preenchimentos de destaque (primary, success, danger, warning).
+  // Escuro porque branco fica abaixo de 3:1 em todas essas cores (ver contrastRatio em theme.ts).
+  textInverse: '#07111F',
+  textOnDark: '#F8FAFC',
   border: '#223149',
   disabled: '#53657F',
   success: '#34D399',

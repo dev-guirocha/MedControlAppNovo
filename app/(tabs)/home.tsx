@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDoseSchedule } from '@/hooks/medication-store';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useAuthStore } from '@/hooks/useAuthStore';
@@ -11,16 +11,18 @@ import { colors, getFontSize, spacing } from '@/constants/theme';
 import { useAppLoadingStore } from '@/hooks/useAppLoadingStore';
 import { ScheduledDose } from '@/types/medication';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
+import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
+  const homeStyles = useMemo(() => createHomeStyles(fontSize), [fontSize]);
   const { medications: allMedications, logDose } = useMedicationStore();
   const { isLoading } = useAppLoadingStore();
   const { doseHistory } = useDoseHistoryStore();
-  const insets = useSafeAreaInsets();
+  const tabBarSpace = useTabBarSpace();
 
   const schedule = useDoseSchedule();
   const missedDoses = schedule.filter(dose => dose.isMissed);
@@ -63,15 +65,16 @@ export default function HomeScreen() {
     );
   }
 
-  const contentBottomPadding = spacing.xl + insets.bottom;
+  const contentBottomPadding = tabBarSpace;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: contentBottomPadding }]}>
         <View style={styles.header}>
           <StyledText style={homeStyles.greeting}>{getGreeting()}, {userProfile.name}!</StyledText>
           <StyledText style={homeStyles.date}>
-            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {/* Só a 1ª letra maiúscula: textTransform 'capitalize' gerava "15 De Novembro" */}
+            {capitalizeFirst(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}
           </StyledText>
         </View>
 
@@ -151,27 +154,34 @@ export default function HomeScreen() {
   );
 }
 
-const homeStyles = StyleSheet.create({
-  greeting: { fontSize: 32, fontWeight: 'bold', color: colors.text },
-  date: { fontSize: 16, color: colors.textSecondary, textTransform: 'capitalize', marginTop: 4 },
-  emptyTitle: { fontSize: 24, fontWeight: '600', color: colors.text, marginTop: 24, marginBottom: 12, textAlign: 'center' },
-  emptySubtitle: { fontSize: 16, color: colors.textSecondary, textAlign: 'center' },
-  sectionTitle: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    color: colors.textSecondary, 
-    marginBottom: 12, 
-    marginTop: spacing.lg, // ✅ AUMENTADO: Espaçamento superior para as seções
-    textTransform:'uppercase', 
-    letterSpacing: 0.5 
-  },
-  missedSectionTitle: { color: colors.danger },
-  summaryLabel: { fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
-  summaryValue: { fontSize: 20, fontWeight: '700', color: colors.text },
-  summaryWarning: { color: colors.warning },
-  summarySkipped: { color: colors.danger },
-  progressText: { marginTop: spacing.sm, color: colors.textSecondary, fontSize: 13 },
-});
+function capitalizeFirst(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Tamanhos derivados da escala escolhida em Perfil > Tamanho do Texto (antes eram fixos).
+function createHomeStyles(fontSize: ReturnType<typeof getFontSize>) {
+  return StyleSheet.create({
+    greeting: { fontSize: fontSize.xxxl, fontWeight: 'bold', color: colors.text },
+    date: { fontSize: fontSize.md, color: colors.textSecondary, marginTop: 4 },
+    emptyTitle: { fontSize: fontSize.xxl, fontWeight: '600', color: colors.text, marginTop: 24, marginBottom: 12, textAlign: 'center' },
+    emptySubtitle: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center' },
+    sectionTitle: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 12,
+      marginTop: spacing.lg,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    missedSectionTitle: { color: colors.danger },
+    summaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+    summaryValue: { fontSize: fontSize.xl, fontWeight: '700', color: colors.text },
+    summaryWarning: { color: colors.warning },
+    summarySkipped: { color: colors.danger },
+    progressText: { marginTop: spacing.sm, color: colors.textSecondary, fontSize: fontSize.sm },
+  });
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },

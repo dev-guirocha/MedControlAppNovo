@@ -30,8 +30,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         await cleanupOrphanedMedicationNotifications(parsedMedications);
 
         for (const medication of parsedMedications) {
+          // Só restaura os lembretes recorrentes. O alerta de estoque dispara na hora em que o
+          // estoque muda (logDose/updateMedication); reagendá-lo aqui o repetia a cada abertura.
           await scheduleMedicationNotifications(medication);
-          await scheduleStockNotification(medication);
         }
       } catch (notificationError) {
         console.error('Error restoring medication notifications:', notificationError);
@@ -58,7 +59,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
 
     try {
-      await scheduleMedicationNotifications(newMed, { requestPermissions: true });
+      await scheduleMedicationNotifications(newMed, { requestPermissions: true, allowCatchUp: true });
       await scheduleStockNotification(newMed, { requestPermissions: true });
     } catch (notificationError) {
       // The medication was already saved; notification failures should not surface as save failures.
@@ -86,7 +87,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
     if (toUpdate) {
       try {
-        await scheduleMedicationNotifications(toUpdate, { requestPermissions: true });
+        await scheduleMedicationNotifications(toUpdate, { requestPermissions: true, allowCatchUp: true });
         if (updates.stock !== undefined) {
           await scheduleStockNotification(toUpdate, { requestPermissions: true });
         }

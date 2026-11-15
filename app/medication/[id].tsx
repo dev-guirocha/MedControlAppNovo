@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
@@ -10,6 +11,7 @@ import Toast from 'react-native-root-toast';
 import { Medication } from '@/types/medication';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
+import { getClosestScheduledDate, getMedicationWeekdays, WEEKDAY_LABELS } from '@/lib/schedule';
 
 export default function MedicationDetailScreen() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function MedicationDetailScreen() {
   const fontSize = getFontSize(fontScale);
   const [loading, setLoading] = useState(false);
   const scheduleForToday = useDoseSchedule();
+  const insets = useSafeAreaInsets();
   const [isStockModalVisible, setIsStockModalVisible] = useState(false);
   const [stockAmount, setStockAmount] = useState('');
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
@@ -172,13 +175,14 @@ export default function MedicationDetailScreen() {
   
   const handleEdit = () => {
     if (!medication) return;
-    const paramsToSend = { ...medication, times: medication.times || [] };
+    const paramsToSend = { ...medication, times: medication.times || [], weekdays: (medication.weekdays ?? []).join(',') };
     router.push({ pathname: '/(modals)/add-medication/form', params: paramsToSend });
   };
 
   const handleDelete = () => {
     if (!medication) return;
-    Alert.alert('Excluir Medicamento', 'Tem certeza?',
+    const name = medication.name;
+    Alert.alert(`Excluir ${name}?`, 'O lembrete e todo o histórico de doses de ' + name + ' também serão apagados. Essa ação não pode ser desfeita.',
       [{ text: 'Cancelar', style: 'cancel' }, {
           text: 'Excluir', style: 'destructive',
           onPress: async () => {
@@ -201,14 +205,14 @@ export default function MedicationDetailScreen() {
     <>
       <Stack.Screen options={{ title: medication.name }} />
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: spacing.lg + insets.bottom }]}>
           <View style={styles.card}>
             <Text style={[styles.medicationName, { fontSize: fontSize.xxxl }]}>{medication.name}</Text>
             <Text style={[styles.dosage, { fontSize: fontSize.xl }]}>{medication.dosage}</Text>
             {medication.condition && (<View style={styles.infoRow}><Pill size={18} color={colors.textSecondary} /><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.condition}</Text></View>)}
             {medication.doctor && (<View style={styles.infoRow}><User size={18} color={colors.textSecondary} /><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.doctor}</Text></View>)}
             <View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Forma:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.form}</Text></View>
-            <View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Frequência:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.frequency}</Text></View>
+            <View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Frequência:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.frequency === 'semanal' ? `semanal (${getMedicationWeekdays(medication).map((day) => WEEKDAY_LABELS[day]).join(', ')})` : medication.frequency}</Text></View>
             {medication.times && medication.times.length > 0 && (<View style={styles.infoRow}><Text style={[styles.label, { fontSize: fontSize.md }]}>Horários:</Text><Text style={[styles.value, { fontSize: fontSize.md }]}>{medication.times.join(', ')}</Text></View>)}
             {medication.instructions && (<View style={styles.instructionsContainer}><Text style={[styles.label, { fontSize: fontSize.md }]}>Instruções:</Text><Text style={[styles.instructions, { fontSize: fontSize.md }]}>{medication.instructions}</Text></View>)}
           </View>
@@ -286,91 +290,4 @@ export default function MedicationDetailScreen() {
       </Modal>
     </>
   );
-}
-
-function getClosestScheduledDate(medication: Medication): Date | null {
-  if (medication.frequency === 'quando necessário' || !medication.times?.length) {
-    return null;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const times = expandMedicationTimes(medication);
-  const candidates = times
-    .map((time) => toDateForTime(today, time))
-    .filter((value): value is Date => value !== null)
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  if (candidates.length === 0) return null;
-
-  const now = new Date();
-  const upcoming = candidates.find((candidate) => candidate.getTime() >= now.getTime());
-  return upcoming ?? candidates[candidates.length - 1];
-}
-
-function expandMedicationTimes(medication: Medication): string[] {
-  const normalized = normalizeTimes(medication.times ?? []);
-
-  switch (medication.frequency) {
-    case 'diária':
-    case 'semanal':
-      return normalized;
-    case 'a cada 12h':
-    case 'a cada 8h': {
-      const interval = medication.frequency === 'a cada 12h' ? 12 : 8;
-      const firstTime = normalized[0];
-      if (!firstTime) return normalized;
-
-      const parsed = parseTime(firstTime);
-      if (!parsed) return normalized;
-
-      const result: string[] = [];
-      let hour = parsed.h;
-      const minute = parsed.m;
-      while (hour < 24) {
-        result.push(formatTime(hour, minute));
-        hour += interval;
-      }
-      return result;
-    }
-    default:
-      return normalized;
-  }
-}
-
-function normalizeTimes(times: string[]): string[] {
-  const parsed = times
-    .map(parseTime)
-    .filter((value): value is { h: number; m: number } => value !== null)
-    .map(({ h, m }) => formatTime(h, m));
-
-  return Array.from(new Set(parsed)).sort();
-}
-
-function parseTime(time: string): { h: number; m: number } | null {
-  const [hours, minutes] = time.split(':').map((part) => Number(part));
-  if (
-    !Number.isInteger(hours) ||
-    !Number.isInteger(minutes) ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return null;
-  }
-  return { h: hours, m: minutes };
-}
-
-function formatTime(hours: number, minutes: number): string {
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
-function toDateForTime(referenceDay: Date, time: string): Date | null {
-  const parsed = parseTime(time);
-  if (!parsed) return null;
-  const date = new Date(referenceDay);
-  date.setHours(parsed.h, parsed.m, 0, 0);
-  return date;
 }

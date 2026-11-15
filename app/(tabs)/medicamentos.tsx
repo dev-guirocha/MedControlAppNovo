@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, SectionList, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SectionList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
@@ -8,6 +8,7 @@ import { SwipeableMedicationCard } from '@/components/SwipeableMedicationCard';
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Pill, Search, X } from 'lucide-react-native';
+import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 
 export default function AllMedicationsScreen() {
   const router = useRouter();
@@ -15,12 +16,22 @@ export default function AllMedicationsScreen() {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const [searchQuery, setSearchQuery] = useState('');
+  const tabBarSpace = useTabBarSpace();
 
   const handleDelete = useCallback(
     (id: string) => {
-      deleteMedication(id);
+      // Excluir apaga também o histórico: sempre confirmar (antes o deslize apagava direto).
+      const name = medications.find((med) => med.id === id)?.name ?? 'este medicamento';
+      Alert.alert(
+        `Excluir ${name}?`,
+        'O lembrete e todo o histórico de doses de ' + name + ' também serão apagados. Essa ação não pode ser desfeita.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Excluir', style: 'destructive', onPress: () => void deleteMedication(id) },
+        ]
+      );
     },
-    [deleteMedication]
+    [deleteMedication, medications]
   );
 
   // ✅ Lógica para filtrar e agrupar os medicamentos
@@ -50,7 +61,7 @@ export default function AllMedicationsScreen() {
   // Se não houver nenhum medicamento cadastrado, mostra o estado de boas-vindas
   if (medications.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={[]}>
         <View style={styles.emptyState}>
           <Pill size={64} color={colors.disabled} />
           <Text style={[styles.emptyTitle, { fontSize: fontSize.xl }]}>Nenhum medicamento adicionado</Text>
@@ -61,7 +72,7 @@ export default function AllMedicationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* ✅ Barra de Busca */}
       <View style={styles.searchContainer}>
         <Search size={20} color={colors.textSecondary} />
@@ -99,7 +110,7 @@ export default function AllMedicationsScreen() {
                 <Text style={[styles.emptySubtitle, { fontSize: fontSize.md }]}>Não encontramos medicamentos com esse nome.</Text>
             </View>
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>

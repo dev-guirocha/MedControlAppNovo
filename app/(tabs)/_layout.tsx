@@ -1,12 +1,12 @@
 import React from 'react';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Pill, User, History, Plus } from 'lucide-react-native';
 import { colors } from '@/constants/theme';
+import { TAB_BAR_HEIGHT, useTabBarBottomOffset } from '@/hooks/useTabBarSpace';
 
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
+  const tabBarBottom = useTabBarBottomOffset();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -36,12 +36,12 @@ export default function TabLayout() {
           position: 'absolute',
           left: 18,
           right: 18,
-          bottom: Math.max(insets.bottom, 12),
+          bottom: tabBarBottom,
           backgroundColor: colors.tabBarBackground,
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: colors.tabBarOutline,
-          height: 64,
+          height: TAB_BAR_HEIGHT,
           paddingHorizontal: 10,
           paddingVertical: 8,
           borderRadius: 26,

@@ -95,15 +95,15 @@ export default function AddAppointmentForm() {
           {/* Campos do formulário ... */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Nome do Doutor(a) *</Text>
-            <TextInput style={[styles.input, dynamicStyles.input]} value={formData.doctorName} onChangeText={(text) => setFormData(prev => ({ ...prev, doctorName: text }))} placeholder="Ex: Dra. Ana Costa"/>
+            <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, dynamicStyles.input]} value={formData.doctorName} onChangeText={(text) => setFormData(prev => ({ ...prev, doctorName: text }))} placeholder="Ex: Dra. Ana Costa"/>
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Especialidade *</Text>
-            <TextInput style={[styles.input, dynamicStyles.input]} value={formData.specialty} onChangeText={(text) => setFormData(prev => ({ ...prev, specialty: text }))} placeholder="Ex: Cardiologista"/>
+            <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, dynamicStyles.input]} value={formData.specialty} onChangeText={(text) => setFormData(prev => ({ ...prev, specialty: text }))} placeholder="Ex: Cardiologista"/>
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Local *</Text>
-            <TextInput style={[styles.input, dynamicStyles.input]} value={formData.location} onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))} placeholder="Ex: Clínica São Lucas"/>
+            <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, dynamicStyles.input]} value={formData.location} onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))} placeholder="Ex: Clínica São Lucas"/>
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Data e Hora *</Text>
@@ -113,7 +113,7 @@ export default function AddAppointmentForm() {
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, dynamicStyles.label]}>Notas (Opcional)</Text>
-            <TextInput style={[styles.input, styles.textArea, dynamicStyles.input]} value={formData.notes} onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))} placeholder="Ex: Levar exames anteriores." multiline/>
+            <TextInput placeholderTextColor={colors.textSecondary} style={[styles.input, styles.textArea, dynamicStyles.input]} value={formData.notes} onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))} placeholder="Ex: Levar exames anteriores." multiline/>
           </View>
           
           {/* ✅ Área de visualização da receita */}
