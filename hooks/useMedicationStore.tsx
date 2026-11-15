@@ -26,8 +26,8 @@ interface MedicationState {
   resumeMedication: (id: string) => Promise<void>;
   rescheduleAll: () => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
-  /** Substitui a lista inteira (usado ao excluir uma pessoa). */
-  replaceAll: (medications: Medication[]) => Promise<void>;
+  /** Remove os remédios de uma pessoa (cascata). Persiste antes do set e lança em falha. */
+  removeByPersonId: (personId: string) => Promise<void>;
   logDose: (medicationId: string, scheduledTime: Date, status: 'taken' | 'skipped') => Promise<void>;
 }
 
@@ -195,14 +195,10 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  replaceAll: async (medications) => {
-    try {
-      set({ medications });
-      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(medications));
-    } catch (error) {
-      console.error('Error replacing medications:', error);
-      showErrorToast('Erro ao salvar os medicamentos.');
-    }
+  removeByPersonId: async (personId) => {
+    const remaining = get().medications.filter((m) => m.personId !== personId);
+    await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(remaining));
+    set({ medications: remaining });
   },
 
   // ✅ FUNÇÃO logDose TOTALMENTE REFATORADA

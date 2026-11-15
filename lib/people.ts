@@ -68,6 +68,8 @@ export function removePersonFromSnapshot(snapshot: PersonScopedSnapshot, personI
 /** Reagendar notificações quando o prefixo de nome muda: cruzou 1↔2+ pessoas ou alguém foi renomeado. */
 export function needsRescheduleOnPeopleChange(before: Person[], after: Person[]): boolean {
   if (shouldShowPersonNames(before) !== shouldShowPersonNames(after)) return true;
+  // Com 1 pessoa não há prefixo de nome, então renomear não muda nenhuma notificação.
+  if (!shouldShowPersonNames(after)) return false;
   return after.some((p) => {
     const previous = before.find((q) => q.id === p.id);
     return !!previous && previous.name !== p.name;

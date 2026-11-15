@@ -10,8 +10,8 @@ interface DoseHistoryState {
   // ✅ logDose agora apenas recebe a entrada pronta para salvar.
   addDoseEntry: (doseEntry: DoseHistory) => Promise<void>;
   removeEntriesByMedicationId: (medicationId: string) => Promise<void>;
-  /** Substitui o histórico inteiro (usado ao excluir uma pessoa). */
-  replaceAll: (doseHistory: DoseHistory[]) => Promise<void>;
+  /** Remove o histórico de uma pessoa (cascata). Persiste antes do set e lança em falha. */
+  removeByPersonId: (personId: string) => Promise<void>;
 }
 
 export const useDoseHistoryStore = create<DoseHistoryState>((set, get) => ({
@@ -53,14 +53,10 @@ export const useDoseHistoryStore = create<DoseHistoryState>((set, get) => ({
       showErrorToast('Erro ao registrar a dose no histórico.'); // ✅ 2. Adicionar feedback de erro
     }
   },
-  replaceAll: async (doseHistory) => {
-    try {
-      set({ doseHistory });
-      await AsyncStorage.setItem(DOSE_HISTORY_KEY, JSON.stringify(doseHistory));
-    } catch (error) {
-      console.error('Error replacing history:', error);
-      showErrorToast('Erro ao salvar o histórico.');
-    }
+  removeByPersonId: async (personId) => {
+    const remaining = get().doseHistory.filter((d) => d.personId !== personId);
+    await AsyncStorage.setItem(DOSE_HISTORY_KEY, JSON.stringify(remaining));
+    set({ doseHistory: remaining });
   },
   removeEntriesByMedicationId: async (medicationId: string) => {
     try {

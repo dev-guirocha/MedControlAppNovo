@@ -62,8 +62,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         updatedProfile.birthYear !== currentProfile.birthYear ||
         updatedProfile.gender !== currentProfile.gender
       ) {
-        const { syncSelfPersonFromProfile } = await import('@/lib/personActions');
-        await syncSelfPersonFromProfile(updatedProfile);
+        try {
+          const { syncSelfPersonFromProfile } = await import('@/lib/personActions');
+          await syncSelfPersonFromProfile(updatedProfile);
+        } catch (syncError) {
+          // O perfil já foi salvo; falha na sincronização não vira erro de perfil.
+          console.error('Error syncing self person:', syncError);
+        }
       }
     } catch (error) { 
       console.error('Error updating user profile:', error); 

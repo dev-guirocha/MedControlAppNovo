@@ -103,6 +103,7 @@ test('needsRescheduleOnPeopleChange', () => {
   assert.equal(needsRescheduleOnPeopleChange([a, b], [a, b]), false);
   assert.equal(needsRescheduleOnPeopleChange([a, b], [a, { ...b, name: 'Outro' }]), true);
   assert.equal(needsRescheduleOnPeopleChange([a, b], [a, { ...b, color: '#999999' }]), false);
+  assert.equal(needsRescheduleOnPeopleChange([a], [{ ...a, name: 'Outro' }]), false);
 });
 
 test('resolveActivePersonId cai na primeira quando a ativa foi excluída', () => {

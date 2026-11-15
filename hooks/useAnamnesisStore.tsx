@@ -18,8 +18,8 @@ interface AnamnesisState {
   loadAnamnesis: () => Promise<void>;
   getAnamnesis: (personId: string) => Anamnesis | null;
   saveAnamnesis: (personId: string, anamnesisData: AnamnesisData) => Promise<void>;
-  /** Substitui o mapa inteiro (usado ao excluir uma pessoa). */
-  replaceAll: (anamnesisByPerson: Record<string, Anamnesis>) => Promise<void>;
+  /** Remove a anamnese de uma pessoa (cascata). Persiste antes do set e lança em falha. */
+  removeByPersonId: (personId: string) => Promise<void>;
   exportAnamnesis: (personId: string, currentData: AnamnesisData) => Promise<boolean>;
 }
 
@@ -103,14 +103,10 @@ export const useAnamnesisStore = create<AnamnesisState>((set, get) => ({
     }
   },
 
-  replaceAll: async (anamnesisByPerson) => {
-    try {
-      await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(anamnesisByPerson));
-      set({ anamnesisByPerson });
-    } catch (error) {
-      console.error('Error replacing anamnesis:', error);
-      showErrorToast('Erro ao salvar a anamnese.');
-    }
+  removeByPersonId: async (personId) => {
+    const { [personId]: _removed, ...remaining } = get().anamnesisByPerson;
+    await AsyncStorage.setItem(ANAMNESIS_KEY, JSON.stringify(remaining));
+    set({ anamnesisByPerson: remaining });
   },
 
   exportAnamnesis: async (personId, currentData) => {

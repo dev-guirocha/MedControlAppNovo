@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import { resolveActivePersonId } from '@/lib/people';
-import { showErrorToast } from '@/lib/toastHelper';
 import type { Person } from '@/types/medication';
 import { ACTIVE_PERSON_KEY, PEOPLE_KEY } from '../src/constants/keys';
 
@@ -42,13 +41,9 @@ export const usePeopleStore = create<PeopleState>((set, get) => ({
   },
 
   savePeople: async (next) => {
-    try {
-      await AsyncStorage.setItem(PEOPLE_KEY, JSON.stringify(next));
-      set({ people: next, activePersonId: resolveActivePersonId(next, get().activePersonId) });
-    } catch (error) {
-      console.error('Error saving people:', error);
-      showErrorToast('Erro ao salvar as pessoas.');
-    }
+    // Persiste antes do set e lança em falha; quem chama decide como avisar.
+    await AsyncStorage.setItem(PEOPLE_KEY, JSON.stringify(next));
+    set({ people: next, activePersonId: resolveActivePersonId(next, get().activePersonId) });
   },
 }));
 
