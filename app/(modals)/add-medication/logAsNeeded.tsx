@@ -10,9 +10,9 @@ import { COMMON_MEDICATIONS } from '@/constants/commonMedications';
 import { useMedicationSuggestionsStore } from '@/hooks/useMedicationSuggestionsStore';
 import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
-import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { usePeopleStore, getPersonName } from '@/hooks/usePeopleStore';
 import { PersonField } from '@/components/PersonChips';
-import { findMedicationForPerson } from '@/lib/people';
+import { findMedicationForPerson, shouldShowPersonNames } from '@/lib/people';
 import { showErrorToast } from '@/lib/toastHelper';
 
 
@@ -48,11 +48,13 @@ export default function LogAsNeededScreen() {
   const [forPersonId, setForPersonId] = useState<string | null>(() => usePeopleStore.getState().activePersonId);
 
   const handleSelectMedication = async (item: ListItem) => {
-    const existingMed = forPersonId ? findMedicationForPerson(medications, forPersonId, item.name) : undefined;
+    const existingMed = forPersonId ? findMedicationForPerson(medications, forPersonId, item.name, { onlyActive: true }) : undefined;
 
     if (existingMed) {
       await logDose(existingMed.id, new Date(), 'taken');
-      Alert.alert('Sucesso!', `${existingMed.name} registrado com sucesso!`);
+      const { people } = usePeopleStore.getState();
+      const personName = shouldShowPersonNames(people) ? getPersonName(existingMed.personId) : null;
+      Alert.alert('Sucesso!', personName ? `${existingMed.name} registrado para ${personName}` : `${existingMed.name} registrado com sucesso!`);
       router.replace('/(tabs)/home'); // ✅ CORREÇÃO: Adicionada a navegação de volta
     } else {
       Alert.alert(

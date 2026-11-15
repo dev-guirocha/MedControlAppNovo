@@ -28,9 +28,11 @@ export type MedicationCardProps = {
   onDeleteAction?: () => void;
   /** Dono do remédio; passado só quando há 2+ pessoas. */
   person?: { name: string; color: string };
+  /** Complemento do rótulo de acessibilidade (ex.: "encerrado em 01/01/2026"). */
+  extraAccessibilityLabel?: string;
 };
 
-export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose, onDeleteAction, person }: MedicationCardProps) => {
+export const MedicationCard = React.memo(({ medication, onPress, isNextDose = false, onTakeDose, onDeleteAction, person, extraAccessibilityLabel }: MedicationCardProps) => {
   const { fontScale } = useAuthStore();
   const fontSize = getFontSize(fontScale);
   const lowStock = (medication.stock <= medication.stockAlertThreshold);
@@ -48,6 +50,7 @@ export const MedicationCard = React.memo(({ medication, onPress, isNextDose = fa
     medication.dosage,
     scheduleLabel,
     lowStock ? `estoque baixo, ${medication.stock} restantes` : null,
+    extraAccessibilityLabel,
   ].filter(Boolean).join(', ');
 
   const dynamicStyles = StyleSheet.create({

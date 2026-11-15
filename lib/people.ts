@@ -81,9 +81,15 @@ export function findMedicationForPerson(
   medications: Medication[],
   personId: string,
   name: string,
+  options: { onlyActive?: boolean } = {},
 ): Medication | undefined {
   const wanted = name.trim().toLowerCase();
-  return medications.find((m) => m.personId === personId && m.name.trim().toLowerCase() === wanted);
+  return medications.find(
+    (m) =>
+      m.personId === personId &&
+      m.name.trim().toLowerCase() === wanted &&
+      (!options.onlyActive || !m.endedAt),
+  );
 }
 
 /** Ano de nascimento: vazio é válido (opcional); senão 4 dígitos entre 1900 e o ano atual. */

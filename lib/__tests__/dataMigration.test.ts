@@ -67,3 +67,20 @@ test('ensure executa uma única vez quando tem sucesso', async () => {
   await ensure();
   assert.equal(runs, 1);
 });
+
+test('@appointments ilegível não trava a migração e a chave original é preservada', async () => {
+  const { storage, data, log } = fakeStorage({ ...v1Data, '@appointments': 'não-json' });
+  await runDataMigration(storage, deps);
+  assert.equal(data.get('@data_version'), '2');
+  assert.equal(log.includes('@appointments'), false);
+  assert.equal(data.get('@appointments'), 'não-json');
+  assert.equal(JSON.parse(data.get('@medications')!)[0].personId, 'p1');
+});
+
+test('@anamnesis ilegível não trava a migração e a chave original é preservada', async () => {
+  const { storage, data, log } = fakeStorage({ ...v1Data, '@anamnesis': '{quebrado' });
+  await runDataMigration(storage, deps);
+  assert.equal(data.get('@data_version'), '2');
+  assert.equal(log.includes('@anamnesis'), false);
+  assert.equal(data.get('@anamnesis'), '{quebrado');
+});

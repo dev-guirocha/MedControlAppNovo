@@ -24,6 +24,15 @@ function parseOr<T>(raw: string | null | undefined, fallback: T): T {
   return raw ? (JSON.parse(raw) as T) : fallback;
 }
 
+function parseReadable<T>(key: string, rawValue: string | null | undefined, fallback: T): { value: T; unreadable: boolean } {
+  try {
+    return { value: parseOr(rawValue, fallback), unreadable: false };
+  } catch (error) {
+    console.error(`Migração: ${key} ilegível; mantida como está e tratada como vazia.`, error);
+    return { value: fallback, unreadable: true };
+  }
+}
+
 /** Lê tudo, migra e grava as coleções primeiro e `@data_version` por último. */
 export async function runDataMigration(storage: MigrationStorage, deps: MigrationDeps): Promise<void> {
   const entries = await storage.multiGet([
@@ -49,25 +58,31 @@ export async function runDataMigration(storage: MigrationStorage, deps: Migratio
     profile = null;
   }
 
+  // Consultas e anamnese ilegíveis não podem travar a migração: valem como vazias só aqui
+  // e a chave original não é sobrescrita, preservando o conteúdo para recuperação manual.
+  const appointments = parseReadable<DataSnapshot['appointments']>(APPOINTMENTS_KEY, raw.get(APPOINTMENTS_KEY), []);
+  const anamnesis = parseReadable<DataSnapshot['anamnesis']>(ANAMNESIS_KEY, raw.get(ANAMNESIS_KEY), null);
+
   const snapshot: DataSnapshot = {
     version,
     profile,
     people: parseOr(raw.get(PEOPLE_KEY), null),
     medications: parseOr(raw.get(MEDS_KEY), []),
     doseHistory: parseOr(raw.get(DOSE_HISTORY_KEY), []),
-    appointments: parseOr(raw.get(APPOINTMENTS_KEY), []),
-    anamnesis: parseOr(raw.get(ANAMNESIS_KEY), null),
+    appointments: appointments.value,
+    anamnesis: anamnesis.value,
   };
 
   const migrated = migrateToV2(snapshot, deps);
 
-  await storage.multiSet([
+  const pairs: [string, string][] = [
     [PEOPLE_KEY, JSON.stringify(migrated.people)],
     [MEDS_KEY, JSON.stringify(migrated.medications)],
     [DOSE_HISTORY_KEY, JSON.stringify(migrated.doseHistory)],
-    [APPOINTMENTS_KEY, JSON.stringify(migrated.appointments)],
-    [ANAMNESIS_KEY, JSON.stringify(migrated.anamnesis)],
-  ]);
+  ];
+  if (!appointments.unreadable) pairs.push([APPOINTMENTS_KEY, JSON.stringify(migrated.appointments)]);
+  if (!anamnesis.unreadable) pairs.push([ANAMNESIS_KEY, JSON.stringify(migrated.anamnesis)]);
+  await storage.multiSet(pairs);
   await storage.setItem(DATA_VERSION_KEY, '2');
 }
 

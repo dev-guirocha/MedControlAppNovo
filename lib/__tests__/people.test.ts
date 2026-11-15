@@ -129,6 +129,14 @@ test('findMedicationForPerson: ignora maiúsculas e espaços nas pontas', () => 
   assert.equal(findMedicationForPerson(meds, 'pai', '  losartana ')?.id, '1');
 });
 
+test('findMedicationForPerson: com onlyActive ignora remédio encerrado', () => {
+  const ended = { ...med('1', 'pai', 'Losartana'), endedAt: '2026-01-01T00:00:00Z' };
+  assert.equal(findMedicationForPerson([ended], 'pai', 'Losartana')?.id, '1');
+  assert.equal(findMedicationForPerson([ended], 'pai', 'Losartana', { onlyActive: true }), undefined);
+  const active = med('2', 'pai', 'Losartana');
+  assert.equal(findMedicationForPerson([ended, active], 'pai', 'Losartana', { onlyActive: true })?.id, '2');
+});
+
 test('parseBirthYear: vazio é válido, 4 dígitos entre 1900 e o ano atual', () => {
   assert.deepEqual(parseBirthYear('  '), { valid: true });
   assert.deepEqual(parseBirthYear('1950', 2026), { valid: true, value: 1950 });

@@ -129,6 +129,7 @@ export default function AllMedicationsScreen() {
             <View>
               <MedicationCard
                 medication={item}
+                extraAccessibilityLabel={`encerrado em ${formatEndedDate(item.endedAt)}`}
                 onPress={() => router.push(`/medication/${item.id}`)}
               />
               <Text style={[styles.endedDate, { fontSize: fontSize.sm }]}>encerrado em {formatEndedDate(item.endedAt)}</Text>
