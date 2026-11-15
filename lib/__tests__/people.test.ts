@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildNotificationText,
+  findMedicationForPerson,
   needsRescheduleOnPeopleChange,
   pickPersonColor,
   removePersonFromSnapshot,
@@ -108,4 +109,21 @@ test('needsRescheduleOnPeopleChange', () => {
 
 test('resolveActivePersonId cai na primeira quando a ativa foi excluída', () => {
   assert.equal(resolveActivePersonId([a], b.id), a.id);
+});
+
+const med = (id: string, personId: string, name: string) => ({ id, personId, name }) as any;
+
+test('findMedicationForPerson: mesmo nome em duas pessoas retorna o da pessoa pedida', () => {
+  const meds = [med('1', 'mae', 'Losartana'), med('2', 'pai', 'Losartana')];
+  assert.equal(findMedicationForPerson(meds, 'pai', 'Losartana')?.id, '2');
+});
+
+test('findMedicationForPerson: nome só em outra pessoa retorna undefined', () => {
+  const meds = [med('1', 'mae', 'Losartana')];
+  assert.equal(findMedicationForPerson(meds, 'pai', 'Losartana'), undefined);
+});
+
+test('findMedicationForPerson: ignora maiúsculas e espaços nas pontas', () => {
+  const meds = [med('1', 'pai', 'Losartana')];
+  assert.equal(findMedicationForPerson(meds, 'pai', '  losartana ')?.id, '1');
 });

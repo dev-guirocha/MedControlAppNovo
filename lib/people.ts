@@ -1,5 +1,5 @@
 import type { DataSnapshot } from '@/lib/migration';
-import type { Person } from '@/types/medication';
+import type { Medication, Person } from '@/types/medication';
 
 // Regras puras de pessoa (sem React Native nem stores) para poder testar fora do app.
 
@@ -74,4 +74,14 @@ export function needsRescheduleOnPeopleChange(before: Person[], after: Person[])
     const previous = before.find((q) => q.id === p.id);
     return !!previous && previous.name !== p.name;
   });
+}
+
+/** Remédio da pessoa com esse nome (sem diferenciar maiúsculas nem espaços nas pontas). Nunca devolve remédio de outra pessoa. */
+export function findMedicationForPerson(
+  medications: Medication[],
+  personId: string,
+  name: string,
+): Medication | undefined {
+  const wanted = name.trim().toLowerCase();
+  return medications.find((m) => m.personId === personId && m.name.trim().toLowerCase() === wanted);
 }

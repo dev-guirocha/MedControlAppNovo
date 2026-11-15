@@ -12,6 +12,7 @@ import { Text } from '@/components/StyledText';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { PersonField } from '@/components/PersonChips';
+import { findMedicationForPerson } from '@/lib/people';
 import { showErrorToast } from '@/lib/toastHelper';
 
 
@@ -47,7 +48,7 @@ export default function LogAsNeededScreen() {
   const [forPersonId, setForPersonId] = useState<string | null>(() => usePeopleStore.getState().activePersonId);
 
   const handleSelectMedication = async (item: ListItem) => {
-    const existingMed = medications.find(m => m.name.toLowerCase() === item.name.toLowerCase());
+    const existingMed = forPersonId ? findMedicationForPerson(medications, forPersonId, item.name) : undefined;
 
     if (existingMed) {
       await logDose(existingMed.id, new Date(), 'taken');
@@ -97,19 +98,21 @@ export default function LogAsNeededScreen() {
   };
 
   const combinedList = useMemo(() => {
-    const baseSuggestions = [...COMMON_MEDICATIONS, ...learnedSuggestions];
+    // Só os remédios da pessoa escolhida contam como "já cadastrados"; nomes de outras pessoas viram sugestão.
+    const personMeds = medications.filter(m => m.personId === forPersonId);
+    const baseSuggestions = [...COMMON_MEDICATIONS, ...learnedSuggestions, ...medications.filter(m => m.personId !== forPersonId).map(m => ({ name: m.name, dosage: m.dosage }))];
     const filteredSuggestions = baseSuggestions.filter(
-      suggestion => !medications.some(
+      suggestion => !personMeds.some(
         userMed => userMed.name.toLowerCase() === suggestion.name.toLowerCase()
       )
-    ).map(s => ({ ...s, isSuggestion: true }));
+    ).map(s => ({ name: s.name, dosage: s.dosage, isSuggestion: true }));
 
     const uniqueList = Array.from(
-      new Map([...medications, ...filteredSuggestions].map(item => [item.name.toLowerCase(), item])).values()
+      new Map([...personMeds, ...filteredSuggestions].map(item => [item.name.toLowerCase(), item])).values()
     );
 
     return uniqueList;
-  }, [learnedSuggestions, medications]);
+  }, [learnedSuggestions, medications, forPersonId]);
 
   const filteredList = combinedList.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())

@@ -29,7 +29,10 @@ export default function ConfirmMedicationScreen() {
   }
 
   const weekdaysParam = Array.isArray(params.weekdays) ? params.weekdays.join(',') : params.weekdays;
-  const confirmPersonId = (Array.isArray(params.personId) ? params.personId[0] : params.personId) || usePeopleStore.getState().activePersonId;
+  const { people, activePersonId } = usePeopleStore.getState();
+  const paramPersonId = Array.isArray(params.personId) ? params.personId[0] : params.personId;
+  // Se a pessoa do parâmetro não existe mais, cai na pessoa ativa.
+  const confirmPersonId = people.some((p) => p.id === paramPersonId) ? paramPersonId : activePersonId;
   const weekdaysLabel = normalizeWeekdays(weekdaysParam).map((day) => WEEKDAY_LABELS[day]).join(', ');
 
   const handleConfirm = async () => {
