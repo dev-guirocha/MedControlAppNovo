@@ -84,7 +84,8 @@ export default function EditPersonScreen() {
     if (trimmed !== firstPerson.name) {
       setLoading(true);
       try {
-        await updatePerson(firstPerson.id, { name: trimmed });
+        // Corrigir o nome aqui significa "estes remédios são de outra pessoa": deixa de ser "eu".
+        await updatePerson(firstPerson.id, { name: trimmed, ...(firstPerson.isSelf ? { isSelf: false } : {}) });
       } catch (error) {
         showErrorToast(errorMessage(error));
         setLoading(false);

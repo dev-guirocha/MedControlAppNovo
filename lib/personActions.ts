@@ -43,7 +43,7 @@ export async function updatePerson(
   const after = before.map((p) => (p.id === id ? { ...p, ...updates } : p));
   await usePeopleStore.getState().savePeople(after);
   await rescheduleIfNeeded(before, after);
-  await mirrorSelfPersonToProfile(before.find((p) => p.id === id)!, updates);
+  await mirrorSelfPersonToProfile(after.find((p) => p.id === id)!, updates);
 }
 
 /**
@@ -56,6 +56,7 @@ async function mirrorSelfPersonToProfile(
   person: Person,
   updates: Partial<Omit<Person, 'id' | 'createdAt'>>,
 ): Promise<void> {
+  // `person` já é a versão atualizada: se deixou de ser isSelf (updates.isSelf === false), não espelha.
   if (!person.isSelf) return;
   const profile = useAuthStore.getState().userProfile;
   if (!profile) return;
@@ -92,5 +93,9 @@ export async function deletePerson(id: string): Promise<void> {
 export async function syncSelfPersonFromProfile(profile: UserProfile): Promise<void> {
   const self = usePeopleStore.getState().people.find((p) => p.isSelf);
   if (!self) return;
-  await updatePerson(self.id, { name: profile.name, birthYear: profile.birthYear, gender: profile.gender });
+  // Só campos definidos: o perfil recriado no onboarding não apaga ano/gênero da pessoa.
+  const updates: Partial<Pick<Person, 'name' | 'birthYear' | 'gender'>> = { name: profile.name };
+  if (profile.birthYear !== undefined) updates.birthYear = profile.birthYear;
+  if (profile.gender !== undefined) updates.gender = profile.gender;
+  await updatePerson(self.id, updates);
 }

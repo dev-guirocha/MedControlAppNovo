@@ -15,12 +15,8 @@ export default function PeopleListScreen() {
   const fontSize = getFontSize(useAuthStore((s) => s.fontScale));
 
   const handleAdd = () => {
-    // Com só 1 pessoa, primeiro confirma de quem são os remédios atuais.
-    if (people.length === 1) {
-      router.push({ pathname: '/(modals)/people/edit', params: { confirmFirst: '1' } });
-    } else {
-      router.push('/(modals)/people/edit');
-    }
+    // Com só 1 pessoa, a própria tela de edição pede a confirmação do nome da primeira.
+    router.push('/(modals)/people/edit');
   };
 
   return (

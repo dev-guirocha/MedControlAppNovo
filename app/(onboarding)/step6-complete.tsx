@@ -28,6 +28,11 @@ export default function OnboardingCompleteScreen() {
 
   const handleFinish = async () => {
     if (loading) return;
+    // Salvaguarda: cuidador sem ninguém cadastrado volta para escolher quem acompanhar.
+    if (userProfile?.type === 'caregiver' && usePeopleStore.getState().people.length === 0) {
+      router.replace('/(onboarding)/step3b-people');
+      return;
+    }
     setLoading(true);
     try {
       // "Para mim" sem ninguém cadastrado: cria a pessoa "eu" com os dados do perfil.
