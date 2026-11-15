@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
-import { FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote, Stethoscope } from 'lucide-react-native';
+import { Users, FileText, ChevronRight, Pencil, ShieldCheck, FileType, TextQuote, Stethoscope } from 'lucide-react-native';
 import { useTabBarSpace } from '@/hooks/useTabBarSpace';
 import { Text } from '@/components/StyledText';
 
@@ -106,6 +106,8 @@ export default function ProfileScreen() {
         <View style={styles.section}>
             <Text style={dynamicStyles.sectionTitle}>CONTA</Text>
             <View style={styles.card}>
+                <SettingsItem text="Pessoas" icon={Users} onPress={() => router.push('/(modals)/people')} />
+                <View style={styles.divider} />
                 <SettingsItem text="Questionário de Anamnese" icon={FileText} onPress={() => router.push('/(modals)/anamnesis')} />
                 <View style={styles.divider} />
                 <SettingsItem text="Consultas" icon={Stethoscope} onPress={() => router.push('/(tabs)/consultas')} />

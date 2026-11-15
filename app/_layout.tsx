@@ -39,6 +39,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(modals)/add-medication" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="(modals)/add-appointment" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="(modals)/edit-profile" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="(modals)/people" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="(modals)/anamnesis" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="medication/[id]" options={{ presentation: 'modal', title: "Detalhes" }} />
       <Stack.Screen name="policy/privacy" options={{ title: "Política de Privacidade" }} />
