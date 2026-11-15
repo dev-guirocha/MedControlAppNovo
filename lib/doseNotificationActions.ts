@@ -5,6 +5,7 @@ import type { NotificationResponse } from 'expo-notifications';
 import { getMedicationActionFromNotificationResponse } from '@/lib/notifications';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { ensureDataMigrated } from '@/lib/dataMigration';
 import { MEDS_KEY } from '@/src/constants/keys';
 
@@ -75,6 +76,8 @@ async function markHandled(key: string) {
 export async function hydrateDoseStoresFromStorage() {
   // A task pode rodar antes de o app abrir após a atualização: migra antes de ler/gravar.
   await ensureDataMigrated();
+  // Runtime novo (task em segundo plano): sem isso o nome da pessoa não resolve.
+  await usePeopleStore.getState().loadPeople();
   const storedMeds = await AsyncStorage.getItem(MEDS_KEY);
   useMedicationStore.setState({ medications: storedMeds ? JSON.parse(storedMeds) : [] });
   await useDoseHistoryStore.getState().loadHistory();

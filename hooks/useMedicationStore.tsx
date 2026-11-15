@@ -4,15 +4,27 @@ import { scheduleMedicationNotifications, cancelMedicationNotifications, schedul
 import { Medication, DoseHistory } from '@/types/medication';
 import { useDoseHistoryStore } from './useDoseHistoryStore';
 import { useMedicationSuggestionsStore } from './useMedicationSuggestionsStore';
+import { usePeopleStore, getPersonName } from './usePeopleStore';
+import { shouldShowPersonNames } from '@/lib/people';
+import { mergeMedicationUpdate } from '@/lib/schedule';
 import { MEDS_KEY } from '../src/constants/keys';
 import { showErrorToast } from '@/lib/toastHelper';
 import * as Crypto from 'expo-crypto';
 
+/** Nome da pessoa para notificações: só aparece quando há 2+ pessoas. */
+function resolvePersonName(medication: Medication): string | null {
+  if (!shouldShowPersonNames(usePeopleStore.getState().people)) return null;
+  return medication.personId ? getPersonName(medication.personId) : null;
+}
+
 interface MedicationState {
   medications: Medication[];
   loadMedications: () => Promise<void>;
-  addMedication: (medication: Omit<Medication, 'id' | 'createdAt'>) => Promise<Medication>;
+  addMedication: (medication: Omit<Medication, 'id' | 'createdAt' | 'endedAt'>) => Promise<Medication>;
   updateMedication: (id: string, updates: Partial<Omit<Medication, 'id'>>) => Promise<void>;
+  endMedication: (id: string) => Promise<void>;
+  resumeMedication: (id: string) => Promise<void>;
+  rescheduleAll: () => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
   logDose: (medicationId: string, scheduledTime: Date, status: 'taken' | 'skipped') => Promise<void>;
 }
@@ -32,7 +44,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         for (const medication of parsedMedications) {
           // Só restaura os lembretes recorrentes. O alerta de estoque dispara na hora em que o
           // estoque muda (logDose/updateMedication); reagendá-lo aqui o repetia a cada abertura.
-          await scheduleMedicationNotifications(medication);
+          if (medication.endedAt) continue;
+          await scheduleMedicationNotifications(medication, { personName: resolvePersonName(medication) });
         }
       } catch (notificationError) {
         console.error('Error restoring medication notifications:', notificationError);
@@ -59,8 +72,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
 
     try {
-      await scheduleMedicationNotifications(newMed, { requestPermissions: true, allowCatchUp: true });
-      await scheduleStockNotification(newMed, { requestPermissions: true });
+      const personName = resolvePersonName(newMed);
+      await scheduleMedicationNotifications(newMed, { requestPermissions: true, allowCatchUp: true, personName });
+      await scheduleStockNotification(newMed, { requestPermissions: true, personName });
     } catch (notificationError) {
       // The medication was already saved; notification failures should not surface as save failures.
       console.error('Error scheduling medication notifications:', notificationError);
@@ -75,7 +89,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
   updateMedication: async (id, updates) => {
     let toUpdate: Medication | undefined;
-    const updatedMeds = get().medications.map(m => (m.id === id ? (toUpdate = { ...m, ...updates }) : m));
+    const updatedMeds = get().medications.map(m => (m.id === id ? (toUpdate = mergeMedicationUpdate(m, updates)) : m));
     try {
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
@@ -85,14 +99,76 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       return;
     }
 
-    if (toUpdate) {
+    if (toUpdate && !toUpdate.endedAt) {
       try {
-        await scheduleMedicationNotifications(toUpdate, { requestPermissions: true, allowCatchUp: true });
+        const personName = resolvePersonName(toUpdate);
+        await scheduleMedicationNotifications(toUpdate, { requestPermissions: true, allowCatchUp: true, personName });
         if (updates.stock !== undefined) {
-          await scheduleStockNotification(toUpdate, { requestPermissions: true });
+          await scheduleStockNotification(toUpdate, { requestPermissions: true, personName });
         }
       } catch (notificationError) {
         console.error('Error updating medication notifications:', notificationError);
+      }
+    }
+  },
+
+  endMedication: async (id) => {
+    const updatedMeds = get().medications.map(m => (m.id === id ? { ...m, endedAt: new Date().toISOString() } : m));
+    try {
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+    } catch (error) {
+      console.error('Error ending medication:', error);
+      showErrorToast('Erro ao encerrar o tratamento.');
+      return;
+    }
+
+    try {
+      // Também cancela o alerta de estoque.
+      await cancelMedicationNotifications(id);
+    } catch (notificationError) {
+      console.error('Error cancelling medication notifications:', notificationError);
+    }
+  },
+
+  resumeMedication: async (id) => {
+    let resumed: Medication | undefined;
+    const updatedMeds = get().medications.map(m => {
+      if (m.id !== id) return m;
+      const { endedAt: _endedAt, ...rest } = m;
+      resumed = rest;
+      return rest;
+    });
+    try {
+      set({ medications: updatedMeds });
+      await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
+    } catch (error) {
+      console.error('Error resuming medication:', error);
+      showErrorToast('Erro ao retomar o tratamento.');
+      return;
+    }
+
+    if (resumed) {
+      try {
+        const personName = resolvePersonName(resumed);
+        await scheduleMedicationNotifications(resumed, { allowCatchUp: true, personName });
+        await scheduleStockNotification(resumed, { personName });
+      } catch (notificationError) {
+        console.error('Error scheduling medication notifications:', notificationError);
+      }
+    }
+  },
+
+  // Reagenda os lembretes de todos (ex.: depois de renomear uma pessoa). Sem catch-up, sem
+  // pedido de permissão e sem repetir alerta de estoque.
+  rescheduleAll: async () => {
+    for (const medication of get().medications) {
+      try {
+        await cancelMedicationNotifications(medication.id);
+        if (medication.endedAt) continue;
+        await scheduleMedicationNotifications(medication, { personName: resolvePersonName(medication) });
+      } catch (notificationError) {
+        console.error('Error rescheduling medication notifications:', notificationError);
       }
     }
   },
@@ -135,6 +211,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       doseId,
       medicationId: medicationId,
       medicationName: med.name,
+      personId: med.personId,
       scheduledTime: scheduledTime.toISOString(),
       status,
       takenTime: status === 'taken' ? new Date().toISOString() : undefined,
@@ -159,7 +236,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       set({ medications: updatedMeds });
       await AsyncStorage.setItem(MEDS_KEY, JSON.stringify(updatedMeds));
       // 4. Disparar a verificação de notificação de estoque
-      await scheduleStockNotification(updatedMed);
+      await scheduleStockNotification(updatedMed, { personName: resolvePersonName(updatedMed) });
     } catch (error) {
       console.error('Error saving medication after logging dose:', error);
       showErrorToast('Erro ao atualizar o estoque do medicamento.');

@@ -3,7 +3,7 @@ import type { Medication } from '@/types/medication';
 // Regras de agenda compartilhadas por Home, detalhes e notificações.
 // Arquivo puro (sem React Native) para poder ser testado fora do app.
 
-type ScheduleFields = Pick<Medication, 'frequency' | 'times' | 'createdAt'> & { weekdays?: number[] };
+type ScheduleFields = Pick<Medication, 'frequency' | 'times' | 'createdAt'> & { weekdays?: number[]; endedAt?: string };
 
 export const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -77,6 +77,7 @@ export function expandMedicationTimes(medication: ScheduleFields): string[] {
 }
 
 export function isScheduledOnDate(medication: ScheduleFields, date: Date): boolean {
+  if (medication.endedAt) return false;
   if (medication.frequency === 'quando necessário') return false;
   if (medication.frequency === 'semanal') {
     return getMedicationWeekdays(medication).includes(date.getDay());
@@ -152,4 +153,18 @@ export function resolveDoseDateFromNotification(time: string, firedAt: Date, lea
     }
   }
   return best;
+}
+
+/**
+ * Aplica uma edição a um medicamento. `id`, `createdAt` e `personId` nunca mudam por edição
+ * (trocar de pessoa não é uma edição); `endedAt` só muda se a atualização o trouxer.
+ */
+export function mergeMedicationUpdate(current: Medication, updates: Partial<Medication>): Medication {
+  return {
+    ...current,
+    ...updates,
+    id: current.id,
+    createdAt: current.createdAt,
+    personId: current.personId,
+  };
 }

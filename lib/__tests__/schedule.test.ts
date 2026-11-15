@@ -54,3 +54,23 @@ test('próxima dose semanal pula para o dia certo', () => {
 test('quando necessário sem agenda', () => assert.equal(s.getClosestScheduledDate(m({ frequency: 'quando necessário', times: ['08:00'] }), sun), null));
 
 test('weekdays como string de params', () => assert.deepEqual(s.normalizeWeekdays('4,1,1,9'), [1, 4]));
+
+test('tratamento encerrado não tem dose agendada', () => {
+  const med = m({ frequency: 'diária', times: ['08:00'], endedAt: '2026-11-10T00:00:00Z' });
+  assert.equal(s.isScheduledOnDate(med, sun), false);
+  assert.deepEqual(s.listDoseDates(med, new Date(2026, 10, 15), 7), []);
+});
+
+test('mergeMedicationUpdate mantém personId e endedAt e aplica o resto', () => {
+  const merged = s.mergeMedicationUpdate(m({ id: 'a', name: 'Velho', personId: 'p1', endedAt: 'X', createdAt: 'C' }), { name: 'Novo' });
+  assert.equal(merged.personId, 'p1');
+  assert.equal(merged.endedAt, 'X');
+  assert.equal(merged.name, 'Novo');
+});
+
+test('mergeMedicationUpdate nunca troca personId, id nem createdAt', () => {
+  const merged = s.mergeMedicationUpdate(m({ id: 'a', personId: 'p1', createdAt: 'C' }), { personId: 'p2', id: 'z', createdAt: 'D' } as any);
+  assert.equal(merged.personId, 'p1');
+  assert.equal(merged.id, 'a');
+  assert.equal(merged.createdAt, 'C');
+});

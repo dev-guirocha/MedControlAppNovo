@@ -4,6 +4,7 @@ import type { NotificationResponse, NotificationTriggerInput } from 'expo-notifi
 
 import { colors } from '@/constants/theme';
 import { Medication } from '@/types/medication';
+import { buildNotificationText } from '@/lib/people';
 import {
   expandMedicationTimes,
   getMedicationWeekdays,
@@ -198,7 +199,7 @@ export async function cleanupOrphanedMedicationNotifications(medications: Medica
 
 export async function scheduleMedicationNotifications(
   medication: Medication,
-  options: { requestPermissions?: boolean; allowCatchUp?: boolean } = {}
+  options: { requestPermissions?: boolean; allowCatchUp?: boolean; personName: string | null }
 ) {
   const Notifications = await getNotificationsModule();
   if (!Notifications) {
@@ -211,6 +212,12 @@ export async function scheduleMedicationNotifications(
   }
 
   await cancelMedicationNotifications(medication.id);
+
+  // Tratamento encerrado não tem lembretes.
+  if (medication.endedAt) {
+    await clearStoredMedicationNotificationIds(medication.id);
+    return;
+  }
 
   // Não agendar notificações para medicamentos "quando necessário"
   if (medication.frequency === 'quando necessário') {
@@ -243,10 +250,17 @@ export async function scheduleMedicationNotifications(
             minute: slot.minute,
           };
 
+      const leadText = buildNotificationText({
+        kind: 'lead',
+        personName: options.personName,
+        medicationName: medication.name,
+        time,
+        leadMinutes: REMINDER_LEAD_MINUTES,
+      });
       const identifier = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `Em ${REMINDER_LEAD_MINUTES} min: ${medication.name}`,
-          body: `Dose agendada para ${time}. Toque para ver detalhes ou registrar a dose.`,
+          title: leadText.title,
+          body: leadText.body,
           subtitle: `Lembrete de Medicamento 💊`,
           sound: 'default',
           data: {
@@ -266,10 +280,16 @@ export async function scheduleMedicationNotifications(
     // Lembrete imediato só quando o usuário acabou de cadastrar/editar dentro da janela
     // de antecedência — nunca ao simplesmente abrir o app (gerava notificação duplicada).
     if (options.allowCatchUp && isScheduledOnDate(medication, now) && shouldScheduleCatchUpReminder(time, now)) {
+      const nowText = buildNotificationText({
+        kind: 'now',
+        personName: options.personName,
+        medicationName: medication.name,
+        time,
+      });
       const catchUpIdentifier = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `Agora: ${medication.name}`,
-          body: `A dose das ${time} esta proxima. Toque para ver detalhes ou registrar a dose.`,
+          title: nowText.title,
+          body: nowText.body,
           subtitle: `Lembrete de Medicamento 💊`,
           sound: 'default',
           data: {
@@ -337,7 +357,7 @@ export async function cancelStockNotification(medicationId: string) {
 // ✅ Função unificada e corrigida, agora usando o `stockAlertThreshold`
 export async function scheduleStockNotification(
   medication: Medication,
-  options: { requestPermissions?: boolean } = {}
+  options: { requestPermissions?: boolean; personName: string | null }
 ) {
   const Notifications = await getNotificationsModule();
   if (!Notifications) {
@@ -354,11 +374,17 @@ export async function scheduleStockNotification(
 
   if (medication.stock <= medication.stockAlertThreshold) {
     try {
+      const stockText = buildNotificationText({
+        kind: 'stock',
+        personName: options.personName,
+        medicationName: medication.name,
+        stock: medication.stock,
+      });
       await Notifications.scheduleNotificationAsync({
         identifier,
         content: {
-          title: '⚠️ Alerta de Estoque Baixo',
-          body: `Seu medicamento ${medication.name} está acabando. Restam apenas ${medication.stock} unidades.`,
+          title: stockText.title,
+          body: stockText.body,
           sound: 'default',
           categoryIdentifier: STOCK_ALERT_CATEGORY_ID,
           data: { medicationId: medication.id, type: 'stock_alert' },
