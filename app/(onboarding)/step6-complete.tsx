@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, getFontSize, spacing } from '@/constants/theme';
@@ -6,6 +6,9 @@ import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import { CheckCircle2 } from 'lucide-react-native';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
+import { addPerson } from '@/lib/personActions';
+import { showErrorToast } from '@/lib/toastHelper';
 
 const ChecklistItem = ({ text, done }: { text: string; done: boolean }) => (
   <View style={styles.checklistItem}>
@@ -21,9 +24,28 @@ export default function OnboardingCompleteScreen() {
   const router = useRouter();
   const { userProfile, updateUserProfile } = useAuthStore();
 
+  const [loading, setLoading] = useState(false);
+
   const handleFinish = async () => {
-    await updateUserProfile({ onboardingCompleted: true });
-    router.replace('/(tabs)/home');
+    if (loading) return;
+    setLoading(true);
+    try {
+      // "Para mim" sem ninguém cadastrado: cria a pessoa "eu" com os dados do perfil.
+      // Se já existem pessoas (refazer configuração), o sync do perfil cuida da pessoa "eu".
+      if (userProfile?.type === 'patient' && usePeopleStore.getState().people.length === 0) {
+        await addPerson({
+          name: userProfile.name,
+          birthYear: userProfile.birthYear,
+          gender: userProfile.gender,
+          isSelf: true,
+        });
+      }
+      await updateUserProfile({ onboardingCompleted: true });
+      router.replace('/(tabs)/home');
+    } catch (error) {
+      showErrorToast(error instanceof Error && error.message ? error.message : 'Não foi possível concluir. Tente novamente.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,6 +75,7 @@ export default function OnboardingCompleteScreen() {
           title="Ir para o Início" 
           onPress={handleFinish} 
           size="large" 
+          loading={loading}
         />
       </View>
     </SafeAreaView>

@@ -12,7 +12,7 @@ interface AuthState {
   fontScale: FontScale;
   loadUserProfile: () => Promise<void>;
   saveUserProfile: (profile: UserProfile) => Promise<void>;
-  updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  updateUserProfile: (profile: Partial<UserProfile>, options?: { skipPersonSync?: boolean }) => Promise<void>;
   setFontScale: (scale: FontScale) => Promise<void>;
 }
 
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  updateUserProfile: async (updates: Partial<UserProfile>) => {
+  updateUserProfile: async (updates: Partial<UserProfile>, options) => {
     try {
       const currentProfile = get().userProfile;
       // Se não houver perfil, não faz nada (isso não deve acontecer no fluxo de onboarding)
@@ -58,9 +58,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Mantém a pessoa "eu" em sincronia com o perfil. Import dinâmico evita ciclo
       // (personActions importa stores).
       if (
+        !options?.skipPersonSync &&
+        (
         updatedProfile.name !== currentProfile.name ||
         updatedProfile.birthYear !== currentProfile.birthYear ||
         updatedProfile.gender !== currentProfile.gender
+        )
       ) {
         try {
           const { syncSelfPersonFromProfile } = await import('@/lib/personActions');

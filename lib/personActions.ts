@@ -4,6 +4,7 @@ import { useAnamnesisStore } from '@/hooks/useAnamnesisStore';
 import { useAppointmentStore } from '@/hooks/useAppointmentStore';
 import { useDoseHistoryStore } from '@/hooks/useDoseHistoryStore';
 import { useMedicationStore } from '@/hooks/useMedicationStore';
+import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { medicationColors } from '@/constants/theme';
 import { cancelMedicationNotifications } from '@/lib/notifications';
@@ -42,6 +43,28 @@ export async function updatePerson(
   const after = before.map((p) => (p.id === id ? { ...p, ...updates } : p));
   await usePeopleStore.getState().savePeople(after);
   await rescheduleIfNeeded(before, after);
+  await mirrorSelfPersonToProfile(before.find((p) => p.id === id)!, updates);
+}
+
+/**
+ * Pessoa "eu" editada em Pessoas: espelha nome/ano/sexo no UserProfile (a outra direção
+ * é syncSelfPersonFromProfile). Anti-laço: só grava campos presentes em `updates` que
+ * diferem do perfil atual, e usa skipPersonSync para o perfil não devolver o sync à pessoa.
+ * Quando o sync vem do perfil, os valores já são iguais e nada é gravado.
+ */
+async function mirrorSelfPersonToProfile(
+  person: Person,
+  updates: Partial<Omit<Person, 'id' | 'createdAt'>>,
+): Promise<void> {
+  if (!person.isSelf) return;
+  const profile = useAuthStore.getState().userProfile;
+  if (!profile) return;
+  const changes: Partial<UserProfile> = {};
+  if ('name' in updates && updates.name !== undefined && updates.name !== profile.name) changes.name = updates.name;
+  if ('birthYear' in updates && updates.birthYear !== profile.birthYear) changes.birthYear = updates.birthYear;
+  if ('gender' in updates && updates.gender !== profile.gender) changes.gender = updates.gender;
+  if (Object.keys(changes).length === 0) return;
+  await useAuthStore.getState().updateUserProfile(changes, { skipPersonSync: true });
 }
 
 export async function deletePerson(id: string): Promise<void> {

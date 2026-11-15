@@ -10,6 +10,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="step2-profile-type" />
       <Stack.Screen name="step3-name" />
       <Stack.Screen name="step4-details" />
+      <Stack.Screen name="step3b-people" />
       <Stack.Screen name="step5-notifications" />
       <Stack.Screen name="step6-complete" />
     </Stack>

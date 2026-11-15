@@ -85,3 +85,13 @@ export function findMedicationForPerson(
   const wanted = name.trim().toLowerCase();
   return medications.find((m) => m.personId === personId && m.name.trim().toLowerCase() === wanted);
 }
+
+/** Ano de nascimento: vazio é válido (opcional); senão 4 dígitos entre 1900 e o ano atual. */
+export function parseBirthYear(text: string, currentYear = new Date().getFullYear()): { valid: boolean; value?: number } {
+  const trimmed = text.trim();
+  if (!trimmed) return { valid: true };
+  if (!/^\d{4}$/.test(trimmed)) return { valid: false };
+  const year = Number(trimmed);
+  if (year < 1900 || year > currentYear) return { valid: false };
+  return { valid: true, value: year };
+}

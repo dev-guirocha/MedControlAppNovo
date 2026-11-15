@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { colors, getContentColorOn, getFontSize, medicationColors, spacing } fro
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { usePeopleStore } from '@/hooks/usePeopleStore';
 import { addPerson, deletePerson, updatePerson } from '@/lib/personActions';
-import { pickPersonColor } from '@/lib/people';
+import { parseBirthYear, pickPersonColor } from '@/lib/people';
 import { showErrorToast } from '@/lib/toastHelper';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/StyledText';
@@ -26,27 +26,20 @@ function errorMessage(error: unknown): string {
   return error instanceof Error && error.message ? error.message : GENERIC_ERROR;
 }
 
-/** Ano de nascimento: vazio é válido (opcional); senão 4 dígitos entre 1900 e o ano atual. */
-function parseBirthYear(text: string): { valid: boolean; value?: number } {
-  const trimmed = text.trim();
-  if (!trimmed) return { valid: true };
-  if (!/^\d{4}$/.test(trimmed)) return { valid: false };
-  const year = Number(trimmed);
-  if (year < 1900 || year > new Date().getFullYear()) return { valid: false };
-  return { valid: true, value: year };
-}
-
 export default function EditPersonScreen() {
   const router = useRouter();
-  const { id, confirmFirst } = useLocalSearchParams<{ id?: string; confirmFirst?: string }>();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const people = usePeopleStore((s) => s.people);
   const fontSize = getFontSize(useAuthStore((s) => s.fontScale));
 
   const editing = id ? people.find((p) => p.id === id) : undefined;
   const firstPerson = people.length === 1 ? people[0] : undefined;
 
-  // Etapa 1 (opcional): confirmar o nome da pessoa 1 antes de cadastrar a segunda.
-  const [step, setStep] = useState<'confirm' | 'form'>(confirmFirst === '1' && firstPerson && !id ? 'confirm' : 'form');
+  // Etapa 1: ao cadastrar a segunda pessoa (já existe exatamente uma), confirmar o nome
+  // da primeira. Derivado aqui, sem depender de parâmetro de rota.
+  const [step, setStep] = useState<'confirm' | 'form'>(!id && firstPerson ? 'confirm' : 'form');
+  // Marca exclusão em andamento/concluída: evita piscar "Pessoa não encontrada" ao voltar.
+  const deleted = useRef(false);
   const [firstName, setFirstName] = useState(firstPerson?.name ?? '');
 
   const [name, setName] = useState(editing?.name ?? '');
@@ -74,6 +67,7 @@ export default function EditPersonScreen() {
 
   // Editando um id que não existe mais (ex.: acabou de ser excluída).
   if (id && !editing) {
+    if (deleted.current) return null;
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
@@ -171,10 +165,12 @@ export default function EditPersonScreen() {
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
+            deleted.current = true;
             try {
               await deletePerson(editing.id);
               router.back();
             } catch (error) {
+              deleted.current = false;
               showErrorToast(errorMessage(error));
               setLoading(false);
             }

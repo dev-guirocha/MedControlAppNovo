@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Text } from '@/components/StyledText';
 import { Check } from 'lucide-react-native';
+import { usePeopleStore } from '@/hooks/usePeopleStore';
 
 const GENDERS = [
   { key: 'female', label: 'Feminino' },
@@ -22,11 +23,17 @@ export default function DetailsScreen() {
   const [birthYear, setBirthYear] = useState(userProfile?.birthYear);
   const [loading, setLoading] = useState(false);
 
+  // Cuidador sem ninguém cadastrado passa por "Quem você vai acompanhar?" antes das notificações.
+  const goNext = () => {
+    const needsPeople = userProfile?.type === 'caregiver' && usePeopleStore.getState().people.length === 0;
+    router.push(needsPeople ? '/(onboarding)/step3b-people' : '/(onboarding)/step5-notifications');
+  };
+
   const handleContinue = async () => {
     setLoading(true);
     await updateUserProfile({ gender, birthYear });
     setLoading(false);
-    router.push('/(onboarding)/step5-notifications');
+    goNext();
   };
 
   return (
@@ -56,7 +63,7 @@ export default function DetailsScreen() {
       </ScrollView>
       <View style={styles.footer}>
         <Button title="Próximo" onPress={handleContinue} size="large" loading={loading}/>
-        <TouchableOpacity onPress={() => router.push('/(onboarding)/step5-notifications')}>
+        <TouchableOpacity onPress={goNext}>
           <Text style={styles.skipText}>Pular</Text>
         </TouchableOpacity>
       </View>

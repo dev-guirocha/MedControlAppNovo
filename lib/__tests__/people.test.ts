@@ -4,6 +4,7 @@ import {
   buildNotificationText,
   findMedicationForPerson,
   needsRescheduleOnPeopleChange,
+  parseBirthYear,
   pickPersonColor,
   removePersonFromSnapshot,
   resolveActivePersonId,
@@ -126,4 +127,12 @@ test('findMedicationForPerson: nome só em outra pessoa retorna undefined', () =
 test('findMedicationForPerson: ignora maiúsculas e espaços nas pontas', () => {
   const meds = [med('1', 'pai', 'Losartana')];
   assert.equal(findMedicationForPerson(meds, 'pai', '  losartana ')?.id, '1');
+});
+
+test('parseBirthYear: vazio é válido, 4 dígitos entre 1900 e o ano atual', () => {
+  assert.deepEqual(parseBirthYear('  '), { valid: true });
+  assert.deepEqual(parseBirthYear('1950', 2026), { valid: true, value: 1950 });
+  assert.equal(parseBirthYear('1899', 2026).valid, false);
+  assert.equal(parseBirthYear('2027', 2026).valid, false);
+  assert.equal(parseBirthYear('19a0', 2026).valid, false);
 });
